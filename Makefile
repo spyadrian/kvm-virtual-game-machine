@@ -12,7 +12,19 @@ help:
 	@echo "    clean_vmm    delete VMM"
 	@echo "    clean_guest  delete guest"
 
-guest:
+run_pv: guest_pv vmm
+	./vmm/vmm guest/guest.bin
+
+run_pv: guest_pv vmm
+	./vmm/vmm guest/guest.bin
+
+vmm:
+	$(MAKE) -C vmm OUT=vmm
+
+guest_phys:
+	$(MAKE) -C guest PV=0 OUT=guest.bin
+
+guest_pv:
 	$(MAKE) -C guest PV=1 OUT=guest.bin
 
 .PHONY: guest
