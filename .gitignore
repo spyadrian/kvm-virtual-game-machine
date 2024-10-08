@@ -1,0 +1,9 @@
+# --- C ---
+*.d
+*.o
+
+# --- GUEST ---
+guest.bin
+
+# --- VMM ---
+vmm/vmm
