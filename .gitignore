@@ -1,3 +1,6 @@
+# --- BEAR ---
+compile_commands.json
+
 # --- C ---
 *.d
 *.o
