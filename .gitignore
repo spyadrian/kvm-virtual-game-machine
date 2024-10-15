@@ -1,5 +1,6 @@
 # --- BEAR ---
 compile_commands.json
+.cache
 
 # --- C ---
 *.d
