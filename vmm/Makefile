@@ -1,4 +1,4 @@
-CC=gcc -std=gnu17 $(BAREMETAL_FLAGS) -Wall -Wextra -MMD -Ishared -I../.. -I..
+CC=gcc -std=gnu17 -Wall -Wextra -MMD -Ishared -I../.. -I..
 
 C_SRCS=$(shell find . -name "*.c")
 C_OBJS=$(C_SRCS:.c=.o)

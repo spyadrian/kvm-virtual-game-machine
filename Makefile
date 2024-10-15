@@ -15,16 +15,27 @@ help:
 run_pv: guest_pv vmm
 	./vmm/vmm guest/guest.bin
 
-run_pv: guest_pv vmm
+run_phys: guest_phys vmm
 	./vmm/vmm guest/guest.bin
 
-vmm:
-	$(MAKE) -C vmm OUT=vmm
-
-guest_phys:
-	$(MAKE) -C guest PV=0 OUT=guest.bin
 
 guest_pv:
 	$(MAKE) -C guest PV=1 OUT=guest.bin
 
-.PHONY: guest
+guest_phys:
+	$(MAKE) -C guest PV=0 OUT=guest.bin
+
+vmm:
+	$(MAKE) -C vmm OUT=vmm
+
+
+clean: clean_vmm clean_guest
+
+clean_vmm:
+	$(MAKE) -C vmm clean OUT=vmm
+
+clean_guest:
+	$(MAKE) -C guest clean
+
+
+.PHONY: clean clean_vmm clean_guest vmm
