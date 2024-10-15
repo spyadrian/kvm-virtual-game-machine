@@ -12,6 +12,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "states.h"
+#include "shared/hypercall_params.h"
+
 // -- DEFINE --
 
 #define KVM_API_VERSION   12
@@ -24,10 +27,11 @@ int main(int argc, char* argv[])
     int kvmfd, vmfd, vcpufd;
     struct kvm_sregs sregs;
     struct kvm_run *run;
-    size_t mmap_size;
-    uint8_t *mem;
+    int32_t mmap_size;
+    uint8_t *mem, *shared_buf;
 
     // -- 0. Handle Args --
+    if (argc != 2) err(1, "Number of args invalide");
     char *file_path = argv[1];
 
     // -- 1. Create a KVM device --
@@ -43,12 +47,12 @@ int main(int argc, char* argv[])
     vmfd = ioctl(kvmfd, KVM_CREATE_VM, (unsigned long)0);
     if (vmfd == -1) err(1, "KVM_CREATE_VM");
 
-    // -- 3. Allocate RAM for the VM --
+    // -- 3.1 Allocate RAM for the VM --
     mem = mmap(NULL, RAM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0); // memory to hold the code
     if (!mem) err(1, "allocating guest memory");
 
-    // -- 4. Map allocated RAM into the VM’s address space --
-    struct kvm_userspace_memory_region region = {
+    // -- 3.2 Map allocated RAM into the VM’s address space --
+    struct kvm_userspace_memory_region region_mem = {
         .slot = 0,
         .guest_phys_addr = 0,
         .memory_size = RAM_SIZE,
@@ -56,8 +60,24 @@ int main(int argc, char* argv[])
         .flags = 0,
     };
 
-    int memreg_err = ioctl(vmfd, KVM_SET_USER_MEMORY_REGION, &region);
+    int memreg_err = ioctl(vmfd, KVM_SET_USER_MEMORY_REGION, &region_mem);
     if (memreg_err == -1) err(1, "KVM_SET_USER_MEMORY_REGION");
+
+    // -- 4.1 Allocate shared buffer for the VM and guest --
+    shared_buf = mmap(NULL, HYPERCALL_BUFF_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0); // memory to hold the code
+    if (!shared_buf) err(1, "allocating shared buffer memory");
+
+    // -- 4.2 Map allocated shared buffer into the VM’s address space --
+    struct kvm_userspace_memory_region region_shared_buf = {
+        .slot = 1,
+        .guest_phys_addr = HYPERCALL_SHARED_ADDR,
+        .memory_size = HYPERCALL_BUFF_SIZE,
+        .userspace_addr = (uint64_t)shared_buf,
+        .flags = 0,
+    };
+
+    int sharedbufreg_err = ioctl(vmfd, KVM_SET_USER_MEMORY_REGION, &region_shared_buf);
+    if (sharedbufreg_err == -1) err(1, "KVM_SET_USER_MEMORY_REGION");
 
     // -- 5. Load guest OS into VM’s RAM --
     // Open the binary file
@@ -89,7 +109,7 @@ int main(int argc, char* argv[])
     // map the shared kvm_run structure and following data
     mmap_size = ioctl(kvmfd, KVM_GET_VCPU_MMAP_SIZE, NULL);
     if (mmap_size == -1) err(1, "KVM_GET_VCPU_MMAP_SIZE");
-    if (mmap_size < sizeof(*run)) errx(1, "KVM_GET_VCPU_MMAP_SIZE unexpectedly small");
+    if (mmap_size < (int32_t)sizeof(*run)) errx(1, "KVM_GET_VCPU_MMAP_SIZE unexpectedly small");
 
     // get memory-mapped file
     run = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, vcpufd, 0);
@@ -127,36 +147,41 @@ int main(int argc, char* argv[])
         // handle VM exits (blocking call)
         switch (run->exit_reason) {
 
-            case KVM_EXIT_HLT:
+            case KVM_EXIT_HLT:    // "halt" CPU instruction
+
                 puts("KVM_EXIT_HLT");
+                break;
+
+            case KVM_EXIT_IO:     // Encountered a PMIO VMexit
+
+                if (run->io.direction == KVM_EXIT_IO_OUT) {
+
+                    uint8_t *addr = (uint8_t *)run + run->io.data_offset;
+                    uint8_t code = *(uint8_t *)addr;
+
+                    switch (code) {
+
+                        case 1: // console
+
+                            hyper_virtual_console_params_t *p = (hyper_virtual_console_params_t *)shared_buf;
+                            printf("%s\n", p->msg + mem);
+                            break;
+                    }
+                }
+
                 done = true;
                 break;
 
-            case KVM_EXIT_IO:
-                if (run->io.direction == KVM_EXIT_IO_OUT && run->io.size == 1
-                        && run->io.port == 0x3f8 && run->io.count == 1)
-                    putchar(*(((char *)run) + run->io.data_offset));
-                else
-                    errx(1, "unhandled KVM_EXIT_IO");
-                break;
+            case KVM_EXIT_MMIO:   // Encountered a MMIO VMexit
 
-            case KVM_EXIT_MMIO:
                 // !TODO!
-                done = true;
                 break;
 
-            case KVM_EXIT_FAIL_ENTRY:
-                errx(1, "KVM_EXIT_FAIL_ENTRY: hardware_entry_failure_reason = 0x%llx", 
-                     (unsigned long long)run->fail_entry.hardware_entry_failure_reason);
-                done = true;
-                break;
-
-            case KVM_EXIT_INTERNAL_ERROR:
-                errx(1, "KVM_EXIT_INTERNAL_ERROR: suberror = 0x%x", run->internal.suberror);
-                done = true;
-                break;
-
-            default:
+            // handle errors
+            case KVM_EXIT_SHUTDOWN :
+            case KVM_EXIT_FAIL_ENTRY :
+            case KVM_EXIT_INTERNAL_ERROR :
+            default :
                 errx(1, "exit_reason = 0x%x", run->exit_reason);
                 done = true;
                 break;
