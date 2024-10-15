@@ -163,13 +163,20 @@ int main(int argc, char* argv[])
 
                         case 1: // console
 
-                            hyper_virtual_console_params_t *p = (hyper_virtual_console_params_t *)shared_buf;
-                            printf("%s\n", p->msg + mem);
+                            hyper_virtual_console_params_t *p_consol = (hyper_virtual_console_params_t *)shared_buf;
+                            printf("%s\n", p_consol->msg + mem);
+                            break;
+
+                        case 2: // timer
+
+                            hyper_timer_sleep_params_t *p_timer = (hyper_timer_sleep_params_t *)shared_buf;
+                            printf("waiting %dus\n", p_timer->us);
+                            sleep(p_timer->us / 1e6);
+                            done = true;
                             break;
                     }
                 }
 
-                done = true;
                 break;
 
             case KVM_EXIT_MMIO:   // Encountered a MMIO VMexit
