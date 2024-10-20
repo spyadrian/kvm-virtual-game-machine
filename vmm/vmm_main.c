@@ -12,7 +12,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "states.h"
+#include "handler.h"
 #include "shared/hypercall_params.h"
 
 // -- DEFINE --
@@ -96,8 +96,7 @@ int main(int argc, char* argv[])
     if (bytes_read < 0) err(1, "Error reading guestOS binary file");
 
     // Check if all bytes were read
-    if (bytes_read != st.st_size) 
-        err(1, "Error: Only %ld of %ld bytes read from file\n", bytes_read, st.st_size);
+    if (bytes_read != st.st_size) err(1, "Error: Only %ld of %ld bytes read from file\n", bytes_read, st.st_size);
 
     // Close the file descriptor
     close(binfd);
@@ -142,56 +141,18 @@ int main(int argc, char* argv[])
 
     bool done = false;
     while (!done) {
+
         if (ioctl(vcpufd, KVM_RUN, NULL) == -1) err(1, "KVM_RUN");
 
-        // handle VM exits (blocking call)
-        switch (run->exit_reason) {
+        state_handler_t handler = STATE_HANDLERS[run->exit_reason];
 
-            case KVM_EXIT_HLT:    // "halt" CPU instruction
+        if (handler) {
 
-                puts("KVM_EXIT_HLT");
-                break;
+            handler(run, shared_buf, mem);
+        }
+        else {
 
-            case KVM_EXIT_IO:     // Encountered a PMIO VMexit
-
-                if (run->io.direction == KVM_EXIT_IO_OUT) {
-
-                    uint8_t *addr = (uint8_t *)run + run->io.data_offset;
-                    uint8_t code = *(uint8_t *)addr;
-
-                    switch (code) {
-
-                        case 1: // console
-
-                            hyper_virtual_console_params_t *p_consol = (hyper_virtual_console_params_t *)shared_buf;
-                            printf("%s\n", p_consol->msg + mem);
-                            break;
-
-                        case 2: // timer
-
-                            hyper_timer_sleep_params_t *p_timer = (hyper_timer_sleep_params_t *)shared_buf;
-                            printf("waiting %dus\n", p_timer->us);
-                            sleep(p_timer->us / 1e6);
-                            done = true;
-                            break;
-                    }
-                }
-
-                break;
-
-            case KVM_EXIT_MMIO:   // Encountered a MMIO VMexit
-
-                // !TODO!
-                break;
-
-            // handle errors
-            case KVM_EXIT_SHUTDOWN :
-            case KVM_EXIT_FAIL_ENTRY :
-            case KVM_EXIT_INTERNAL_ERROR :
-            default :
-                errx(1, "exit_reason = 0x%x", run->exit_reason);
-                done = true;
-                break;
+            errx(1, "exit_reason = 0x%x", run->exit_reason);
         }
     }
 }

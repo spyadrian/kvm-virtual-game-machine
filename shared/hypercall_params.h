@@ -5,8 +5,14 @@
 
 // --- DEFINE ---
 
-#define HYPERCALL_SHARED_ADDR 0xC0000000
-#define HYPERCALL_BUFF_SIZE 4096
+#define HYPERCALL_PMIO_ADDR   0xABBA
+
+#define HYPERCALL_SHARED_ADDR   0xC0000000
+#define HYPERCALL_BUFF_SIZE     4096
+
+#define HYPERCALL_CODE_CONSOLE    1
+#define HYPERCALL_CODE_TIMER      2
+#define HYPERCALL_CODE_GFX_INIT   3
 
 // --- SHARED STRUCT ---
 
@@ -19,6 +25,12 @@ typedef struct {
 
     uint32_t us;    // delay in micro-seconds
 } __attribute__((packed)) hyper_timer_sleep_params_t;
+
+typedef struct {
+
+    uint32_t width;   // horizontal resolution in pixels
+    uint32_t height;  // vertical resolution in pixels 
+} __attribute__((packed)) hyper_init_gfx_params_t;
 
 // --- FUNCTION ---
 
