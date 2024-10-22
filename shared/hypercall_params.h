@@ -14,6 +14,13 @@
 #define HYPERCALL_CODE_TIMER      2
 #define HYPERCALL_CODE_GFX_INIT   3
 
+#define REG_TIMER_CMD  0x43
+#define REG_TIMER_DATA 0x40
+
+#define REG_GFX_INIT_ST   0x4E700000
+#define REG_GFX_INIT_CMD  0x4E700100
+#define REG_GFX_INIT_DATA 0x4E700200
+
 // --- SHARED STRUCT ---
 
 typedef struct {
@@ -36,4 +43,4 @@ typedef struct {
 
 // ...
 
-#endif
+#endif // _HYPERCALL_PARAMS_H_
