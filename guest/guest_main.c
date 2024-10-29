@@ -6,6 +6,11 @@
 #include "pmio.h"
 #include "shared/hypercall_params.h"
 
+#include "ide/ide.h"
+#include "gfx/gfx.h"
+#include "timer/timer.h"
+#include "console/console.h"
+
 // If PV == 1 => uses paravirtualized drivers (when available)
 // If PV == 0 => uses physical (hardware) drivers (when available)
 #if PV == 1
@@ -23,40 +28,22 @@ void guest_main() {
     idt_init();  // Initialize interrupt subsystem
     sti();       // Enable hardware interrupts
 
-    // paravirtualized console
+    // - pv console -
+    char *str = "Hi from the guest !";
+    console_send_pv(str);
 
-    char *str = "abcdefgh";
-    hyper_virtual_console_params_t param_console;
-    param_console.msg = (uint64_t)str;
-    memcpy((void *)HYPERCALL_SHARED_ADDR, (void *)&param_console, sizeof(param_console));
+    // - pv timer -
+    timer_pv_wait(1e6);
 
-    outb(HYPERCALL_PMIO_ADDR, HYPERCALL_CODE_CONSOLE);
+    // - phys timer -
+    timer_phys_wait(1e6);
 
-    // paravirtualized timer
+    // - pv gfx init -
+    gfx_pv_init(1920, 1080);
 
-    hyper_timer_sleep_params_t param_timer;
-    param_timer.us = 1e6;
-    memcpy((void *)HYPERCALL_SHARED_ADDR, (void *)&param_timer, sizeof(param_timer));
-
-    outb(HYPERCALL_PMIO_ADDR, HYPERCALL_CODE_TIMER);
-
-    // emulated timer
-
-    outw(REG_TIMER_CMD, 20);
-    outd(REG_TIMER_DATA, 1e6);
-
-    // paravirtualized gfx init 
-
-    hyper_init_gfx_params_t param_gfx;
-    param_gfx.width = 1920;
-    param_gfx.height = 1080;
-    memcpy((void *)HYPERCALL_SHARED_ADDR, (void *)&param_gfx, sizeof(param_gfx));
-
-    outb(HYPERCALL_PMIO_ADDR, HYPERCALL_CODE_GFX_INIT);
-
-    // emulated gfx init
-
-    // TODO:
+    // - phys gfx init -
+    /* gfx_phys_init(1920, 1080); */
 
     // timer_sleep(100000);
 }
+
