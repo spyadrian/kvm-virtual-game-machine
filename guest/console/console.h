@@ -7,6 +7,6 @@
 
 // --- FUNCTION ---
 
-void console_send_pv(char *str);
+void console_pv_send(char *str);
 
 #endif // _CONSOLE_H_

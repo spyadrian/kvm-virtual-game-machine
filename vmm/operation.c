@@ -44,7 +44,7 @@ void op_callback_console_conclude(void *addr) {
 
     hyper_virtual_console_params_t *p_consol = (hyper_virtual_console_params_t *)addr;
 
-    printf("hypercall : sending a message...\n");
+    printf("action : sending a message...\n");
     printf("%s\n", (char *)p_consol->msg);
 }
 
@@ -57,7 +57,7 @@ void op_callback_timer_conclude(void *addr) {
 
     hyper_timer_sleep_params_t *p_timer = (addr == NULL) ? &param_timer : (hyper_timer_sleep_params_t *)addr;
 
-    printf("hypercall : setting up a %dus timer...\n", p_timer->us);
+    printf("action : setting up a %dus timer...\n", p_timer->us);
     usleep(p_timer->us);
 }
 
@@ -75,7 +75,7 @@ void op_callback_gfx_init_conclude(void *addr) {
 
     hyper_init_gfx_params_t *p_gfx_init = (addr == NULL) ? &param_gfx_init : (hyper_init_gfx_params_t *)addr;
 
-    printf("hypercall : initializing gfx %dx%d...\n", p_gfx_init->width, p_gfx_init->height);
+    printf("action : initializing gfx %dx%d...\n", p_gfx_init->width, p_gfx_init->height);
     width_gfx = p_gfx_init->width;
     height_gfx = p_gfx_init->height;
     sem_post(&sem_gfx);

@@ -10,7 +10,7 @@
 
 // --- FUNCTION ---
 
-void console_send_pv(char *str) {
+void console_pv_send(char *str) {
 
     hyper_virtual_console_params_t param_console;
     param_console.msg = (uint64_t)str;
