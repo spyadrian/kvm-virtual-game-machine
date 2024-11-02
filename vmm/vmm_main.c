@@ -11,8 +11,12 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <pthread.h>
+#include <semaphore.h>
 
+#include "gfx.h"
 #include "handler.h"
+#include "operation.h"
 #include "shared/hypercall_params.h"
 
 // -- DEFINE --
@@ -20,15 +24,47 @@
 #define KVM_API_VERSION   12
 #define RAM_SIZE          (512 * 1024)
 
+#define SEM_THREAD  0
+
+sem_t sem_gfx;
+uint32_t width_gfx;
+uint32_t height_gfx;
+
+static uint8_t *mem, *shared_buf;
+static struct kvm_run *run;
+static int vcpufd;
+
+// -- THREAD --
+
+static void *thread_hypercall() {
+
+    bool done = false;
+    while (!done) {
+
+        if (ioctl(vcpufd, KVM_RUN, NULL) == -1) err(1, "KVM_RUN");
+
+        state_handler_t handler = STATE_HANDLERS[run->exit_reason];
+
+        if (handler) {
+
+            handler(run, shared_buf, mem, &done);
+        }
+        else {
+
+            errx(1, "exit_reason = 0x%x", run->exit_reason);
+        }
+    }
+
+    return NULL;
+}
+
 // -- MAIN --
 
 int main(int argc, char* argv[])
 {
-    int kvmfd, vmfd, vcpufd;
+    int kvmfd, vmfd;
     struct kvm_sregs sregs;
-    struct kvm_run *run;
     int32_t mmap_size;
-    uint8_t *mem, *shared_buf;
 
     // -- 0. Handle Args --
     if (argc != 2) err(1, "Number of args invalide");
@@ -139,20 +175,23 @@ int main(int argc, char* argv[])
 
     // -- 7. Run the vCPU --
 
-    bool done = false;
-    while (!done) {
+    sem_init(&sem_gfx, SEM_THREAD, 0);
 
-        if (ioctl(vcpufd, KVM_RUN, NULL) == -1) err(1, "KVM_RUN");
+    pthread_t t_hypercall;
+    pthread_create(&t_hypercall, NULL, thread_hypercall, NULL);
 
-        state_handler_t handler = STATE_HANDLERS[run->exit_reason];
+    sem_wait(&sem_gfx);
 
-        if (handler) {
+    // -- 8. Manage gfx --
 
-            handler(run, shared_buf, mem);
-        }
-        else {
+    gfx_context_t *ctxt = gfx_create("Basic Example", width_gfx, height_gfx);
+    if (!ctxt) err(1, "KVM_SET_REGS");
 
-            errx(1, "exit_reason = 0x%x", run->exit_reason);
-        }
-    }
+    // -- X. Finalize --
+    pthread_join(t_hypercall, NULL);
+
+    gfx_destroy(ctxt);
+    sem_destroy(&sem_gfx);
+
+    return 0;
 }

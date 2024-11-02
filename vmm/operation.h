@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <semaphore.h>
 
 
 // --- DEFINE ---
@@ -25,6 +27,10 @@ typedef struct {
     uint8_t size;                   // the size of the operation (8, 16 or 32 bits)
     void (*callback)(void *addr);   // custom function that would be executed at the end of the state
 } state_t;
+
+extern sem_t sem_gfx;
+extern uint32_t width_gfx;
+extern uint32_t height_gfx;
 
 extern state_t *STATE_ALL_STARTERS[];
 

@@ -3,6 +3,7 @@
 #include <err.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <stdbool.h>
 
@@ -165,12 +166,26 @@ static void wrapper_op_gfx_init(uint8_t *shared_buf) {
 
 // - VMM EXIT REASON HANDLER -
 
-void handle_halt(struct kvm_run *run, uint8_t *shared_buf, uint8_t *mem) {
+void handle_halt(struct kvm_run *run, ...) {
 
-    // printf("KVM_EXIT_HLT\n");
+    va_list args; va_start(args, run);
+
+    va_arg(args, uint8_t *); va_arg(args, uint8_t *); // skip two first args
+    bool *done = va_arg(args, bool *);
+
+    printf("guest halted\n");
+    *done = true;
+
+    va_end(args);
 }
 
-void handle_pmio(struct kvm_run *run, uint8_t *shared_buf, uint8_t *mem) {
+// waiting for : uint8_t *shared_buf, uint8_t *mem
+void handle_pmio(struct kvm_run *run, ...) {
+
+    va_list args; va_start(args, run);
+
+    uint8_t *shared_buf = va_arg(args, uint8_t *);
+    uint8_t *mem = va_arg(args, uint8_t *);
 
     if (run->io.direction == KVM_EXIT_IO_OUT) {
 
@@ -189,9 +204,12 @@ void handle_pmio(struct kvm_run *run, uint8_t *shared_buf, uint8_t *mem) {
                 state_compute(current_state, value);
         }
     }
+
+    va_end(args);
 }
 
-void handle_mmio(struct kvm_run *run, uint8_t *shared_buf, uint8_t *mem) {
+// waiting for : uint8_t *shared_buf, uint8_t *mem
+void handle_mmio(struct kvm_run *run, ...) {
 
     if (run->mmio.is_write) {
 
@@ -219,7 +237,7 @@ void handle_hypercall(uint32_t code, uint8_t *shared_buf, uint8_t *mem) {
             wrapper_op_timer(shared_buf);
         break;
 
-        case HYPERCALL_CODE_GFX_INIT: 
+        case HYPERCALL_CODE_GFX_INIT:
             wrapper_op_gfx_init(shared_buf);
         break;
 

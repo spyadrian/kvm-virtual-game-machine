@@ -2,11 +2,12 @@
 #define _STATES_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <linux/kvm.h>
 
 // --- DEFINE ---
 
-typedef void (*state_handler_t)(struct kvm_run *run, uint8_t *shared_buf, uint8_t *mem);
+typedef void (*state_handler_t)(struct kvm_run *run, ...);
 
 extern state_handler_t const STATE_HANDLERS[];
 
@@ -19,7 +20,7 @@ extern state_handler_t const STATE_HANDLERS[];
  * @param shared_buf Buffer shared between the host and guest.
  * @param mem        Pointer to the VM's memory.
  */
-void handle_halt(struct kvm_run *run, uint8_t *shared_buf, uint8_t *mem);
+void handle_halt(struct kvm_run *run, ...);
 
 /**
  * @brief Handles the I/O port access (PMIO) exit from the virtual machine.
@@ -30,7 +31,7 @@ void handle_halt(struct kvm_run *run, uint8_t *shared_buf, uint8_t *mem);
  * @param shared_buf Buffer shared between the host and guest.
  * @param mem        Pointer to the VM's memory.
  */
-void handle_pmio(struct kvm_run *run, uint8_t *shared_buf, uint8_t *mem);
+void handle_pmio(struct kvm_run *run, ...);
 
 /**
  * @brief Handles the memory-mapped I/O (MMIO) exit from the virtual machine.
@@ -41,7 +42,7 @@ void handle_pmio(struct kvm_run *run, uint8_t *shared_buf, uint8_t *mem);
  * @param shared_buf Buffer shared between the host and guest.
  * @param mem        Pointer to the VM's memory.
  */
-void handle_mmio(struct kvm_run *run, uint8_t *shared_buf, uint8_t *mem);
+void handle_mmio(struct kvm_run *run, ...);
 
 /**
  * @brief Handles hypercalls issued by the virtual machine.

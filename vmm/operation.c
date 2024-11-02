@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <semaphore.h>
 
 #include "shared/hypercall_params.h"
 
@@ -57,7 +58,7 @@ void op_callback_timer_conclude(void *addr) {
     hyper_timer_sleep_params_t *p_timer = (addr == NULL) ? &param_timer : (hyper_timer_sleep_params_t *)addr;
 
     printf("hypercall : setting up a %dus timer...\n", p_timer->us);
-    sleep(p_timer->us / 1e6);
+    usleep(p_timer->us);
 }
 
 void op_callback_gfx_init_store_w(void *addr) {
@@ -75,5 +76,7 @@ void op_callback_gfx_init_conclude(void *addr) {
     hyper_init_gfx_params_t *p_gfx_init = (addr == NULL) ? &param_gfx_init : (hyper_init_gfx_params_t *)addr;
 
     printf("hypercall : initializing gfx %dx%d...\n", p_gfx_init->width, p_gfx_init->height);
-    // TODO:
+    width_gfx = p_gfx_init->width;
+    height_gfx = p_gfx_init->height;
+    sem_post(&sem_gfx);
 }
