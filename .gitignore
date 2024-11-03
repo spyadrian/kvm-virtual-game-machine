@@ -11,3 +11,4 @@ guest.bin
 
 # --- VMM ---
 vmm/vmm
+vmm/disk.raw
