@@ -1,10 +1,22 @@
 #ifndef _IDE_H_
 #define _IDE_H_
 
-#define SECTOR_SIZE 512
+#include <stdint.h>
 
-// Write a sector.
-// Implement a device driver for the true physical hardware.
-void ide_write_sector_phys(int sector_idx, void *data);
+// --- DEFINE ---
 
-#endif
+// ...
+
+// --- FUNCTION ---
+
+/**
+ * Read a sector from the first disk.
+ * @param first sector to read (0-indexed)
+ * @param dst address to store to read data
+ * Based on the assembly code at http://wiki.osdev.org/ATA_read/write_sectors
+ */
+void ide_phys_write_sector(uint32_t sector_idx, void *data);
+
+void ide_pv_write_sector(uint32_t sector_idx, void *data);
+
+#endif // _IDE_H_
