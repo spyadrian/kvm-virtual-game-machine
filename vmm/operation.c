@@ -1,10 +1,14 @@
 #include "operation.h"
 
+#include <err.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <semaphore.h>
 
+#include "shared/ide_regs.h"
 #include "shared/hypercall_params.h"
 
 // --- DEFINE ---
@@ -18,21 +22,43 @@ state_t STATE_TIMER[] = {
 
 state_t STATE_GFX_INIT[] = {
 
-    { OP_READ_INJECT, REG_GFX_INIT_ST,   0, 4, NULL },
+    { OP_READ_INJECT, REG_GFX_INIT_ST,   0, 1, NULL },
     { OP_WRITE_EQUAL, REG_GFX_INIT_CMD,  5, 4, NULL },
-    { OP_WRITE_STORE, REG_GFX_INIT_DATA, 0, 4, op_callback_gfx_init_store_w},
-    { OP_WRITE_STORE, REG_GFX_INIT_DATA, 0, 4, op_callback_gfx_init_store_h},
-    { OP_EMUL_END,    0,                 0, 0, op_callback_gfx_init_conclude},
+    { OP_WRITE_STORE, REG_GFX_INIT_DATA, 0, 4, op_callback_gfx_init_store_w },
+    { OP_WRITE_STORE, REG_GFX_INIT_DATA, 0, 4, op_callback_gfx_init_store_h },
+    { OP_EMUL_END,    0,                 0, 0, op_callback_gfx_init_conclude },
+};
+
+state_t STATE_IDE[] = {
+
+    { OP_READ_INJECT,      REG_IDE_ST,       0,                1, op_callback_ide_prepare },
+    { OP_WRITE_EQUAL,      REG_IDE_DATA + 2, 1,                1, NULL },
+    { OP_WRITE_STORE,      REG_IDE_DATA + 3, 0,                1, op_callback_ide_store_sector_1 },
+    { OP_WRITE_STORE,      REG_IDE_DATA + 4, 0,                1, op_callback_ide_store_sector_2 },
+    { OP_WRITE_STORE,      REG_IDE_DATA + 5, 0,                1, op_callback_ide_store_sector_3 },
+    { OP_WRITE_STORE,      REG_IDE_DATA + 6, 0,                1, op_callback_ide_store_sector_4 },
+    { OP_WRITE_EQUAL,      REG_IDE_CMD,      0x30,             1, NULL },
+    { OP_READ_INJECT,      REG_IDE_ST,       0,                1, NULL },
+    { OP_WRITE_STORE_LOOP, REG_IDE_DATA,     0,                2, op_callback_ide_store_data },
+    { OP_EMUL_END,         0,                0,                0, op_callback_ide_condlude },
 };
 
 state_t *STATE_ALL_STARTERS[] = {
 
     &STATE_TIMER[0],
     &STATE_GFX_INIT[0],
+    &STATE_IDE[0],
 };
+
+bool flag_stop_loop = false;
 
 static hyper_timer_sleep_params_t param_timer;
 static hyper_init_gfx_params_t param_gfx_init;
+static hyper_ide_params_t param_ide;
+
+// store the index of the actual loop
+static uint32_t loop_ide_data;
+static uint16_t buf_ide_data[MAX_LOOP_IDE_DATA];
 
 // --- STATIC FUNCTION ---
 
@@ -79,4 +105,75 @@ void op_callback_gfx_init_conclude(void *addr) {
     width_gfx = p_gfx_init->width;
     height_gfx = p_gfx_init->height;
     sem_post(&sem_gfx);
+}
+
+void op_callback_ide_prepare(void *addr) {
+
+    flag_stop_loop = false;
+    loop_ide_data = MAX_LOOP_IDE_DATA;
+
+    param_ide.data = (uint64_t)buf_ide_data;
+}
+
+void op_callback_ide_store_sector_1(void *addr) {
+
+    param_ide.sector_idx = *(uint8_t *)addr;
+}
+
+void op_callback_ide_store_sector_2(void *addr) {
+
+    param_ide.sector_idx |= (*(uint8_t *)addr) << 8;
+}
+
+void op_callback_ide_store_sector_3(void *addr) {
+
+    param_ide.sector_idx |= (*(uint8_t *)addr) << 16;
+}
+
+void op_callback_ide_store_sector_4(void *addr) {
+
+    param_ide.sector_idx |= ((*(uint8_t *)addr) & 0x0F) << 24;
+    // TODO: what to do with the mode ?
+}
+
+void op_callback_ide_store_data(void *addr) {
+
+    buf_ide_data[MAX_LOOP_IDE_DATA - loop_ide_data] = *(uint16_t *)addr;
+    loop_ide_data--;
+
+    if (loop_ide_data == 0) {
+
+        flag_stop_loop = true;
+        loop_ide_data = MAX_LOOP_IDE_DATA;
+    }
+}
+
+void op_callback_ide_condlude(void *addr) {
+
+    hyper_ide_params_t *p_ide = (addr == NULL) ? &param_ide : (hyper_ide_params_t *)addr;
+    printf("action : writing on 0x%lx on sector %d\n", p_ide->data, p_ide->sector_idx);
+
+    // check sector range
+    if (p_ide->sector_idx > MAX_SECTOR_NUM) err(1, "IDE sector is out of range");
+
+    FILE *disk = fopen(disk_path, "r+b");
+    if (!disk) err(1, "Failed opening the disk file");
+
+    // calculate the offset for the sector
+    uint64_t offset = (uint64_t)p_ide->sector_idx * SECTOR_SIZE;
+
+    // Seek to the sector position
+    if (fseek(disk, offset, SEEK_SET) != 0) {
+        err(1, "IDE seek failed");
+        fclose(disk);
+    }
+
+    // Write 512 bytes to the specified sector
+    size_t bytes_written = fwrite((void *)p_ide->data, 1, SECTOR_SIZE, disk);
+    if (bytes_written != SECTOR_SIZE) {
+        err(1, "IDE failed to write full sector");
+        fclose(disk);
+    }
+
+    fclose(disk);
 }

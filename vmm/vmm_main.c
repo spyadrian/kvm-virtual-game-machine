@@ -30,6 +30,8 @@ sem_t sem_gfx;
 uint32_t width_gfx;
 uint32_t height_gfx;
 
+char *disk_path;
+
 static uint8_t *mem, *shared_buf;
 static struct kvm_run *run;
 static int vcpufd;
@@ -67,8 +69,9 @@ int main(int argc, char* argv[])
     int32_t mmap_size;
 
     // -- 0. Handle Args --
-    if (argc != 2) err(1, "Number of args invalide");
+    if (argc != 3) err(1, "Number of args invalide");
     char *file_path = argv[1];
+    disk_path = argv[2];
 
     // -- 1. Create a KVM device --
     kvmfd = open("/dev/kvm", O_RDWR | O_CLOEXEC); // get file descriptor

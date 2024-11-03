@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <pthread.h>
 #include <semaphore.h>
 
@@ -13,10 +14,11 @@
 
 typedef enum {
 
-    OP_WRITE_EQUAL,  // Perform a write operation and check if the written value matches the expected value
-    OP_WRITE_STORE,  // Store the written value into a specific location (used in callbacks)
-    OP_READ_INJECT,  // Inject a value into the guest from a specific address
-    OP_EMUL_END,     // End of the state machine, with an callback for completion
+    OP_WRITE_EQUAL,       // Perform a write operation and check if the written value matches the expected value
+    OP_WRITE_STORE,       // Store the written value into a specific location (used in callbacks)
+    OP_WRITE_STORE_LOOP,  // Store the written value into a specific location multiple time
+    OP_READ_INJECT,       // Inject a value into the guest from a specific address
+    OP_EMUL_END,          // End of the state machine, with an callback for completion
 } operation_t;
 
 typedef struct {
@@ -28,9 +30,13 @@ typedef struct {
     void (*callback)(void *addr);   // custom function that would be executed at the end of the state
 } state_t;
 
+extern bool flag_stop_loop;
+
 extern sem_t sem_gfx;
 extern uint32_t width_gfx;
 extern uint32_t height_gfx;
+
+extern char *disk_path;
 
 extern state_t *STATE_ALL_STARTERS[];
 
@@ -83,5 +89,19 @@ void op_callback_gfx_init_store_h(void *addr);
  * @param addr Address of the graphics parameters, or `NULL` to use previously stored values.
  */
 void op_callback_gfx_init_conclude(void *addr);
+
+void op_callback_ide_prepare(void *addr);
+
+void op_callback_ide_store_sector_1(void *addr);
+
+void op_callback_ide_store_sector_2(void *addr);
+
+void op_callback_ide_store_sector_3(void *addr);
+
+void op_callback_ide_store_sector_4(void *addr);
+
+void op_callback_ide_store_data(void *addr);
+
+void op_callback_ide_condlude(void *addr);
 
 #endif // _OPERATION_H_

@@ -13,6 +13,7 @@
 #define HYPERCALL_CODE_CONSOLE    1
 #define HYPERCALL_CODE_TIMER      2
 #define HYPERCALL_CODE_GFX_INIT   3
+#define HYPERCALL_CODE_IDE        4
 
 #define REG_TIMER_CMD  0x43
 #define REG_TIMER_DATA 0x40
@@ -20,6 +21,10 @@
 #define REG_GFX_INIT_ST   0x4E700000
 #define REG_GFX_INIT_CMD  0x4E700100
 #define REG_GFX_INIT_DATA 0x4E700200
+
+#define REG_IDE_ST    0x1F7
+#define REG_IDE_CMD   0x1F7
+#define REG_IDE_DATA  0x1F0
 
 // --- SHARED STRUCT ---
 
@@ -38,6 +43,12 @@ typedef struct {
     uint32_t width;   // horizontal resolution in pixels
     uint32_t height;  // vertical resolution in pixels 
 } __attribute__((packed)) hyper_init_gfx_params_t;
+
+typedef struct {
+
+    uint32_t sector_idx;  // sector index ( or number )
+    uint64_t data;        // address of data to write (512 bytes)
+} __attribute__((packed)) hyper_ide_params_t;
 
 // --- FUNCTION ---
 

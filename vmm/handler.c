@@ -92,6 +92,7 @@ static state_t *state_check(uint64_t addr, uint8_t size, uint32_t value) {
             break;
 
             case OP_WRITE_STORE:
+            case OP_WRITE_STORE_LOOP:
 
                 if (next_state->addr == addr && next_state->size == size && next_state->callback != NULL)
                     return next_state;
@@ -111,11 +112,6 @@ static void state_compute(state_t *state, uint32_t value) {
 
     switch (state->op) {
 
-        case OP_WRITE_STORE:
-
-            state->callback(&value);
-        break;
-
         case OP_READ_INJECT:
 
             injecte_data((uint8_t *)&state->addr, state->size, state->value);
@@ -123,11 +119,21 @@ static void state_compute(state_t *state, uint32_t value) {
                    state->size * 8, state->addr, state->value);
         break;
 
+        case OP_WRITE_STORE_LOOP:
+
+            if (flag_stop_loop == false)
+                current_state = state - 1; // cancled next +1
+        break;
+
         case OP_EMUL_END:
+        case OP_WRITE_STORE:
         case OP_WRITE_EQUAL:
             // nothing...
         break;
     }
+
+    if (state->callback != NULL)
+        state->callback(&value);
 
     // - check and compute last operation -
     current_state = state + 1;
@@ -162,6 +168,14 @@ static void wrapper_op_gfx_init(uint8_t *shared_buf) {
     op_callback_gfx_init_conclude(p_init_gfx);
 }
 
+static void wrapper_op_ide(uint8_t *shared_buf, uint8_t *mem) {
+
+    hyper_ide_params_t *p_ide = (hyper_ide_params_t *)shared_buf;
+    p_ide->data = p_ide->data + (uint64_t)mem;
+
+    op_callback_ide_condlude(p_ide);
+}
+
 // --- FUNCTION ---
 
 // - VMM EXIT REASON HANDLER -
@@ -170,7 +184,7 @@ void handle_halt(struct kvm_run *run, ...) {
 
     va_list args; va_start(args, run);
 
-    va_arg(args, uint8_t *); va_arg(args, uint8_t *); // skip two first args
+    va_arg(args, uint8_t *); va_arg(args, uint8_t *);  // skip two first args
     bool *done = va_arg(args, bool *);
 
     printf("guest halted\n");
@@ -208,7 +222,6 @@ void handle_pmio(struct kvm_run *run, ...) {
     va_end(args);
 }
 
-// waiting for : uint8_t *shared_buf, uint8_t *mem
 void handle_mmio(struct kvm_run *run, ...) {
 
     if (run->mmio.is_write) {
@@ -239,6 +252,10 @@ void handle_hypercall(uint32_t code, uint8_t *shared_buf, uint8_t *mem) {
 
         case HYPERCALL_CODE_GFX_INIT:
             wrapper_op_gfx_init(shared_buf);
+        break;
+
+        case HYPERCALL_CODE_IDE:
+            wrapper_op_ide(shared_buf, mem);
         break;
 
         default:
