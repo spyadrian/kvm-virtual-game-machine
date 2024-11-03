@@ -11,8 +11,11 @@ $(OUT): $(C_OBJS)
 %.o: %.c
 	$(CC) -c $< -o $@
 
+create_disk:
+	qemu-img create -f raw $(DISK) $(DISK_SIZE)
+
 clean:
-	rm -f $(C_OBJS) $(C_DEPS) *.o *.d $(OUT)
+	rm -f $(C_OBJS) $(C_DEPS) *.o *.d $(OUT) $(DISK)
 
 .PHONY: clean
 
