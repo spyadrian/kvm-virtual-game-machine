@@ -25,6 +25,17 @@ static state_t *current_state = NULL;
 
 // - UTILS -
 
+/**
+ * @brief Retrieves data from a specified address with a given size.
+ *
+ * This function extracts a value from the address provided, interpreting the data based
+ * on the specified size (1, 2, or 4 bytes). If an unsupported size is given, the function
+ * will terminate the program with an error.
+ *
+ * @param addr Address to retrieve data from.
+ * @param size Size of the data to retrieve (in bytes).
+ * @return Extracted 32-bit value from the specified address.
+ */
 static uint32_t retrieve_data(uint8_t *addr, uint8_t size) {
 
     uint32_t value;
@@ -51,6 +62,17 @@ static uint32_t retrieve_data(uint8_t *addr, uint8_t size) {
     return value;
 }
 
+/**
+ * @brief Injects data into a specified address with a given size.
+ *
+ * This function writes a value to the address provided, interpreting the data based
+ * on the specified size (1, 2, or 4 bytes). If an unsupported size is provided, the function
+ * will terminate the program with an error.
+ *
+ * @param addr Address to inject data into.
+ * @param size Size of the data to inject (in bytes).
+ * @param value The 32-bit value to inject at the specified address.
+ */
 static void injecte_data(uint8_t *addr, uint8_t size, uint32_t value) {
 
     switch (size) {
@@ -73,6 +95,17 @@ static void injecte_data(uint8_t *addr, uint8_t size, uint32_t value) {
     }
 }
 
+/**
+ * @brief Checks if a state transition is possible based on the provided address, size, and value.
+ *
+ * Iterates over available state machine configurations to find a matching state
+ * that meets the specified conditions, returning it if found. 
+ *
+ * @param addr Memory address of the operation.
+ * @param size Size of the operation (in bytes).
+ * @param value Value to compare or store based on the state's operation.
+ * @return Pointer to the matching state, or NULL if no match is found.
+ */
 static state_t *state_check(uint64_t addr, uint8_t size, uint32_t value) {
 
     for (uint32_t i = 0; i < STATE_MACHINE_NUM + 1; i++) {
@@ -114,6 +147,17 @@ static state_t *state_check(uint64_t addr, uint8_t size, uint32_t value) {
     return NULL;
 }
 
+/**
+ * @brief Executes operations for the current state and determines if the next state should be entered.
+ *
+ * Performs any necessary computations or callback invocations for the current state.
+ * Determines whether to advance to the next state based on the state's configuration and
+ * modifies `current_state` accordingly.
+ *
+ * @param state Pointer to the current state.
+ * @param value Value for the operation (e.g., value written to a register).
+ * @param addr Address associated with the operation.
+ */
 static void state_compute(state_t *state, uint32_t value, uint8_t *addr) {
 
     bool go_next = true;
@@ -134,6 +178,7 @@ static void state_compute(state_t *state, uint32_t value, uint8_t *addr) {
 
         case OP_WRITE_STORE_LOOP:
 
+            // - prevent advancing to the next state if loop is ongoing -
             if (flag_stop_loop == false)
                 go_next = false;
         break;
@@ -145,20 +190,27 @@ static void state_compute(state_t *state, uint32_t value, uint8_t *addr) {
         break;
     }
 
-    // - check and compute last operation -
+    // - move to the next state if applicable (not in loop) -
     if (go_next) current_state = state + 1;
 
+    // - check to end and compute the last operation -
     if (current_state->op == OP_EMUL_END) {
 
         if (current_state->callback != NULL)
             current_state->callback(NULL);
 
-        current_state = NULL; 
+        current_state = NULL;
     }
 }
 
-// - OPERATION WRAPPER -
+// - OPERATION WRAPPERS -
 
+/**
+ * @brief Handles console hypercall by adjusting buffer pointers and invoking callback.
+ *
+ * @param shared_buf Buffer shared between guest and host.
+ * @param mem        Pointer to guest memory, used to calculate buffer offsets.
+ */
 static void wrapper_op_console(uint8_t *shared_buf, uint8_t *mem) {
 
     hyper_virtual_console_params_t *p_consol = (hyper_virtual_console_params_t *)shared_buf;
@@ -167,18 +219,37 @@ static void wrapper_op_console(uint8_t *shared_buf, uint8_t *mem) {
     op_callback_console_conclude(p_consol);
 }
 
+/**
+ * @brief Handles timer hypercall by invoking the timer conclusion callback.
+ *
+ * @param shared_buf Buffer holding timer parameters for the hypercall.
+ */
 static void wrapper_op_timer(uint8_t *shared_buf) {
 
     hyper_timer_sleep_params_t *p_timer = (hyper_timer_sleep_params_t *)shared_buf;
     op_callback_timer_conclude(p_timer);
 }
 
+/**
+ * @brief Handles graphics initialization hypercall and invokes conclusion callback.
+ *
+ * @param shared_buf Buffer holding graphics initialization parameters.
+ */
 static void wrapper_op_gfx_init(uint8_t *shared_buf) {
 
     hyper_init_gfx_params_t *p_init_gfx = (hyper_init_gfx_params_t *)shared_buf;
     op_callback_gfx_init_conclude(p_init_gfx);
 }
 
+/**
+ * @brief Handles IDE (Integrated Drive Electronics) hypercall and invokes the conclusion callback.
+ *
+ * Adjusts the data pointer to account for the guest memory base, ensuring the callback
+ * receives a valid address for the data transfer.
+ *
+ * @param shared_buf Buffer holding IDE parameters for the hypercall.
+ * @param mem        Pointer to guest memory, used to calculate data buffer offsets.
+ */
 static void wrapper_op_ide(uint8_t *shared_buf, uint8_t *mem) {
 
     hyper_ide_params_t *p_ide = (hyper_ide_params_t *)shared_buf;

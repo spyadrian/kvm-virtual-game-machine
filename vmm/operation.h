@@ -90,18 +90,53 @@ void op_callback_gfx_init_store_h(void *addr);
  */
 void op_callback_gfx_init_conclude(void *addr);
 
+/**
+ * @brief Prepares for an IDE operation by setting up necessary parameters.
+ *
+ * @param addr Address of the IDE parameters or `NULL` if using previously configured parameters.
+ */
 void op_callback_ide_prepare(void *addr);
 
+/**
+ * @brief Stores data in the first sector for an IDE operation.
+ *
+ * @param addr Address containing the data to be stored in sector 1, or `NULL` to use pre-existing data.
+ */
 void op_callback_ide_store_sector_1(void *addr);
 
+/**
+ * @brief Stores data in the second sector for an IDE operation.
+ *
+ * @param addr Address containing the data to be stored in sector 2, or `NULL` to use pre-existing data.
+ */
 void op_callback_ide_store_sector_2(void *addr);
 
+/**
+ * @brief Stores data in the third sector for an IDE operation.
+ *
+ * @param addr Address containing the data to be stored in sector 3, or `NULL` to use pre-existing data.
+ */
 void op_callback_ide_store_sector_3(void *addr);
 
+/**
+ * @brief Stores data in the fourth sector for an IDE operation.
+ *
+ * @param addr Address containing the data to be stored in sector 4, or `NULL` to use pre-existing data.
+ */
 void op_callback_ide_store_sector_4(void *addr);
 
+/**
+ * @brief Stores the entire data payload for an IDE operation.
+ *
+ * @param addr Address containing the complete IDE data payload, or `NULL` if previously stored data is to be used.
+ */
 void op_callback_ide_store_data(void *addr);
 
+/**
+ * @brief Concludes the IDE operation by finalizing data transfer or processing steps.
+ *
+ * @param addr Address of the concluding parameters for the IDE operation, or `NULL` to use previously set parameters.
+ */
 void op_callback_ide_conclude(void *addr);
 
 #endif // _OPERATION_H_
