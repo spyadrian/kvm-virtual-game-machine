@@ -42,6 +42,6 @@ void guest_main() {
     char data[SECTOR_SIZE] = "here are my data !\n";
     ide_write(0, data);
 
-    timer_wait(1e7);
+    halt();
 }
 
