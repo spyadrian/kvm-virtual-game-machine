@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
 
     // Get the file size using fstat
     struct stat st;
-    if (fstat(binfd, &st) < 0) perror("Error getting file size");
+    if (fstat(binfd, &st) < 0) err(1, "Error getting file size");
 
     // Check if the file size exceeds the available memory
     if (st.st_size > RAM_SIZE) err(1, "Error: GuestOS binary size exceeds 512KB\n");
