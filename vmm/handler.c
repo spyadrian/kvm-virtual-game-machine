@@ -78,29 +78,35 @@ static state_t *state_check(uint64_t addr, uint8_t size, uint32_t value) {
     for (uint32_t i = 0; i < STATE_MACHINE_NUM + 1; i++) {
 
         // - get next state or first state of one of all state machine available -
-        if (i == 0 && current_state == NULL) continue;
+        state_t *state = (i == 0) ? current_state : STATE_ALL_STARTERS[i - 1];
 
-        state_t *next_state = (i == 0) ? current_state : STATE_ALL_STARTERS[i - 1];
+        if (state == NULL) continue;
 
-        // - check the validity of the next state -
-        switch (next_state->op) {
+        // - check the validity of the retrieving state -
+        switch (state->op) {
 
             case OP_WRITE_EQUAL:
 
-                if (next_state->addr == addr && next_state->size == size && next_state->value == value)
-                    return next_state;
+                if (state->addr == addr && state->size == size && state->value == value)
+                    return state;
             break;
 
             case OP_WRITE_STORE:
             case OP_WRITE_STORE_LOOP:
 
-                if (next_state->addr == addr && next_state->size == size && next_state->callback != NULL)
-                    return next_state;
+                if (state->addr == addr && state->size == size && state->callback != NULL)
+                    return state;
+            break;
+
+            case OP_READ_INJECT:
+
+                if (state->addr == addr && state->size == size)
+                    return state;
             break;
 
             case OP_EMUL_END:
-            case OP_READ_INJECT:
-                // nothing...
+
+                return state;
             break;
         }
     }
@@ -108,21 +114,28 @@ static state_t *state_check(uint64_t addr, uint8_t size, uint32_t value) {
     return NULL;
 }
 
-static void state_compute(state_t *state, uint32_t value) {
+static void state_compute(state_t *state, uint32_t value, uint8_t *addr) {
 
+    bool go_next = true;
+
+    // - compute actual operation -
+    if (state->callback != NULL)
+        state->callback(&value);
+
+    // - compute general operation that don't need callback -
     switch (state->op) {
 
         case OP_READ_INJECT:
 
-            injecte_data((uint8_t *)&state->addr, state->size, state->value);
-            printf("PMIO guest read: size=%d port=0x%x [value injected by VMM=0x%x]\n", 
+            injecte_data(addr, state->size, state->value);
+            printf("guest read: size=%d port=0x%lx [value injected by VMM=0x%x]\n",
                    state->size * 8, state->addr, state->value);
         break;
 
         case OP_WRITE_STORE_LOOP:
 
             if (flag_stop_loop == false)
-                current_state = state - 1; // cancled next +1
+                go_next = false;
         break;
 
         case OP_EMUL_END:
@@ -132,11 +145,9 @@ static void state_compute(state_t *state, uint32_t value) {
         break;
     }
 
-    if (state->callback != NULL)
-        state->callback(&value);
-
     // - check and compute last operation -
-    current_state = state + 1;
+    if (go_next) current_state = state + 1;
+
     if (current_state->op == OP_EMUL_END) {
 
         if (current_state->callback != NULL)
@@ -173,7 +184,7 @@ static void wrapper_op_ide(uint8_t *shared_buf, uint8_t *mem) {
     hyper_ide_params_t *p_ide = (hyper_ide_params_t *)shared_buf;
     p_ide->data = p_ide->data + (uint64_t)mem;
 
-    op_callback_ide_condlude(p_ide);
+    op_callback_ide_conclude(p_ide);
 }
 
 // --- FUNCTION ---
@@ -212,11 +223,19 @@ void handle_pmio(struct kvm_run *run, ...) {
 
         } else {
 
-            current_state = state_check(run->io.port, run->io.size, value);
+            current_state = state_check(run->io.port, run->io.size, value); // get and check incoming state
 
             if (current_state != NULL)
-                state_compute(current_state, value);
+                state_compute(current_state, value, (uint8_t *)run + run->io.data_offset);
         }
+    }
+    else if (run->io.direction == KVM_EXIT_IO_IN) {
+
+        printf("PMIO guest read: \tport=0x%x \tsize=%d\n", run->io.port, run->io.size * 8);
+        current_state = state_check(run->io.port, run->io.size, 0);
+
+        if (current_state != NULL)
+            state_compute(current_state, current_state->value, (uint8_t *)run + run->io.data_offset);
     }
 
     va_end(args);
@@ -232,7 +251,15 @@ void handle_mmio(struct kvm_run *run, ...) {
         current_state = state_check(run->mmio.phys_addr, run->mmio.len, value);
 
         if (current_state != NULL)
-            state_compute(current_state, value);
+            state_compute(current_state, value, run->mmio.data);
+    }
+    else if (!run->mmio.is_write) {
+
+        printf("MMIO guest read: \taddr=0x%llx \tlen=%d\n", run->mmio.phys_addr, run->mmio.len * 8);
+        current_state = state_check(run->mmio.phys_addr, run->mmio.len, 0);
+
+        if (current_state != NULL)
+            state_compute(current_state, current_state->value, run->mmio.data);
     }
 }
 
