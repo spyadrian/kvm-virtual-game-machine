@@ -22,10 +22,6 @@
 #define REG_GFX_INIT_CMD  0x4E700100
 #define REG_GFX_INIT_DATA 0x4E700200
 
-#define REG_IDE_ST    0x1F7
-#define REG_IDE_CMD   0x1F7
-#define REG_IDE_DATA  0x1F0
-
 // --- SHARED STRUCT ---
 
 typedef struct {
