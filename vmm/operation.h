@@ -10,7 +10,7 @@
 
 // --- DEFINE ---
 
-#define STATE_MACHINE_NUM 2
+#define STATE_MACHINE_NUM 3
 
 typedef enum {
 
@@ -24,7 +24,7 @@ typedef enum {
 typedef struct {
 
     operation_t op;                 // the operation to perform
-    uint32_t addr;                  // the address written to/read from
+    uint64_t addr;                  // the address written to/read from
     uint32_t value;                 // the expected written value or value to inject
     uint8_t size;                   // the size of the operation (8, 16 or 32 bits)
     void (*callback)(void *addr);   // custom function that would be executed at the end of the state
@@ -102,6 +102,6 @@ void op_callback_ide_store_sector_4(void *addr);
 
 void op_callback_ide_store_data(void *addr);
 
-void op_callback_ide_condlude(void *addr);
+void op_callback_ide_conclude(void *addr);
 
 #endif // _OPERATION_H_
