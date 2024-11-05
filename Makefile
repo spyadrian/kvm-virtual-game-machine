@@ -39,7 +39,7 @@ clean_vmm:
 	$(MAKE) -C vmm clean OUT=vmm DISK=$(DISK)
 
 clean_guest:
-	$(MAKE) -C guest clean
+	$(MAKE) -C guest clean OUT=guest.bin
 
 
 .PHONY: clean clean_vmm clean_guest vmm create_disk
