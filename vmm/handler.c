@@ -258,6 +258,26 @@ static void wrapper_op_ide(uint8_t *shared_buf, uint8_t *mem) {
     op_callback_ide_conclude(p_ide);
 }
 
+static void wrapper_op_sprite_init(uint8_t *shared_buf, uint8_t *mem) {
+
+    hyper_sprite_init_params_t *p_sprite = (hyper_sprite_init_params_t *)shared_buf;
+    p_sprite->data = p_sprite->data + (uint64_t)mem;
+
+    op_callback_sprite_init_conclude(p_sprite);
+}
+
+static void wrapper_op_sprite_visibility(uint8_t *shared_buf) {
+
+    hyper_sprite_visibility_params_t *p_sprite = (hyper_sprite_visibility_params_t *)shared_buf;
+    op_callback_sprite_visibility_conclude(p_sprite);
+}
+
+static void wrapper_op_sprite_position(uint8_t *shared_buf) {
+
+    hyper_sprite_position_params_t *p_sprite = (hyper_sprite_position_params_t *)shared_buf;
+    op_callback_sprite_position_conclude(p_sprite);
+}
+
 // --- FUNCTION ---
 
 // - VMM EXIT REASON HANDLER -
@@ -354,6 +374,18 @@ void handle_hypercall(uint32_t code, uint8_t *shared_buf, uint8_t *mem) {
 
         case HYPERCALL_CODE_IDE:
             wrapper_op_ide(shared_buf, mem);
+        break;
+
+        case HYPERCALL_CODE_SPRITE_INIT:
+            wrapper_op_sprite_init(shared_buf, mem);
+        break;
+
+        case HYPERCALL_CODE_SPRITE_VISI:
+            wrapper_op_sprite_visibility(shared_buf);
+        break;
+
+        case HYPERCALL_CODE_SPRITE_POS:
+            wrapper_op_sprite_position(shared_buf);
         break;
 
         default:

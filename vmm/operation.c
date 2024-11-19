@@ -55,6 +55,9 @@ bool flag_stop_loop = false;
 static hyper_timer_sleep_params_t param_timer;
 static hyper_init_gfx_params_t param_gfx_init;
 static hyper_ide_params_t param_ide;
+static hyper_sprite_init_params_t param_sprite_init;
+static hyper_sprite_visibility_params_t param_sprite_vis;
+static hyper_sprite_position_params_t param_sprite_pos;
 
 // store the index of the actual loop
 static uint32_t loop_ide_data = MAX_LOOP_IDE_DATA;
@@ -177,3 +180,28 @@ void op_callback_ide_conclude(void *addr) {
 
     fclose(disk);
 }
+
+void op_callback_sprite_init_conclude(void *addr) {
+
+    hyper_sprite_init_params_t *p_sprite_init = (addr == NULL) ? &param_sprite_init : (hyper_sprite_init_params_t *)addr;
+
+    printf("OPERATION : initializing sprite %d of size %dx%d...\n", p_sprite_init->id, p_sprite_init->width, p_sprite_init->height);
+    // TODO:
+}
+
+void op_callback_sprite_visibility_conclude(void *addr) {
+
+    hyper_sprite_visibility_params_t *p_sprite_vis = (addr == NULL) ? &param_sprite_vis : (hyper_sprite_visibility_params_t *)addr;
+
+    printf("OPERATION : setting the visibility of the sprite %d at %d...\n", p_sprite_vis->id, p_sprite_vis->toggle);
+    // TODO:
+}
+
+void op_callback_sprite_position_conclude(void *addr) {
+
+    hyper_sprite_position_params_t *p_sprite_pos = (addr == NULL) ? &param_sprite_pos : (hyper_sprite_position_params_t *)addr;
+
+    printf("OPERATION : setting the poistion of the sprite %d at (%d, %d)...\n", p_sprite_pos->id, p_sprite_pos->x, p_sprite_pos->y);
+    // TODO:
+}
+

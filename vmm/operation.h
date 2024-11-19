@@ -139,4 +139,10 @@ void op_callback_ide_store_data(void *addr);
  */
 void op_callback_ide_conclude(void *addr);
 
+void op_callback_sprite_init_conclude(void *addr);
+
+void op_callback_sprite_visibility_conclude(void *addr);
+
+void op_callback_sprite_position_conclude(void *addr);
+
 #endif // _OPERATION_H_
