@@ -1,6 +1,7 @@
 #include "operation.h"
 
 #include <err.h>
+#include "gfx.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -31,16 +32,46 @@ state_t STATE_GFX_INIT[] = {
 
 state_t STATE_IDE[] = {
 
-    { OP_READ_INJECT,      REG_IDE_ST,       0x40,             1, op_callback_ide_prepare },
-    { OP_WRITE_EQUAL,      REG_IDE_DATA + 2, 1,                1, NULL },
-    { OP_WRITE_STORE,      REG_IDE_DATA + 3, 0,                1, op_callback_ide_store_sector_1 },
-    { OP_WRITE_STORE,      REG_IDE_DATA + 4, 0,                1, op_callback_ide_store_sector_2 },
-    { OP_WRITE_STORE,      REG_IDE_DATA + 5, 0,                1, op_callback_ide_store_sector_3 },
-    { OP_WRITE_STORE,      REG_IDE_DATA + 6, 0,                1, op_callback_ide_store_sector_4 },
-    { OP_WRITE_EQUAL,      REG_IDE_CMD,      0x30,             1, NULL },
-    { OP_READ_INJECT,      REG_IDE_ST,       0x40,             1, NULL },
-    { OP_WRITE_STORE_LOOP, REG_IDE_DATA,     0,                2, op_callback_ide_store_data },
-    { OP_EMUL_END,         0,                0,                0, op_callback_ide_conclude },
+    { OP_READ_INJECT,      REG_IDE_ST,       0x40, 1, op_callback_ide_prepare },
+    { OP_WRITE_EQUAL,      REG_IDE_DATA + 2, 1,    1, NULL },
+    { OP_WRITE_STORE,      REG_IDE_DATA + 3, 0,    1, op_callback_ide_store_sector_1 },
+    { OP_WRITE_STORE,      REG_IDE_DATA + 4, 0,    1, op_callback_ide_store_sector_2 },
+    { OP_WRITE_STORE,      REG_IDE_DATA + 5, 0,    1, op_callback_ide_store_sector_3 },
+    { OP_WRITE_STORE,      REG_IDE_DATA + 6, 0,    1, op_callback_ide_store_sector_4 },
+    { OP_WRITE_EQUAL,      REG_IDE_CMD,      0x30, 1, NULL },
+    { OP_READ_INJECT,      REG_IDE_ST,       0x40, 1, NULL },
+    { OP_WRITE_STORE_LOOP, REG_IDE_DATA,     0,    2, op_callback_ide_store_data },
+    { OP_EMUL_END,         0,                0,    0, op_callback_ide_conclude },
+};
+
+state_t STATE_SPRITE_INIT[] = {
+
+    { OP_WRITE_EQUAL,      REG_SPRITE_CMD,  0x9,  4, op_callback_sprite_init_prepare },
+    { OP_WRITE_EQUAL,      REG_SPRITE_CMD,  0x1B, 4, NULL },
+    { OP_WRITE_STORE,      REG_SPRITE_DATA, 0,    4, op_callback_sprite_init_store_id },
+    { OP_WRITE_STORE,      REG_SPRITE_DATA, 0,    4, op_callback_sprite_init_store_width },
+    { OP_WRITE_STORE,      REG_SPRITE_DATA, 0,    4, op_callback_sprite_init_store_height },
+    { OP_WRITE_STORE_LOOP, REG_SPRITE_DATA, 0,    1, op_callback_sprite_init_store_pixels },
+    { OP_EMUL_END,         0,               0,    0, op_callback_sprite_init_conclude },
+};
+
+state_t STATE_SPRITE_VIS[] = {
+
+    { OP_WRITE_EQUAL, REG_SPRITE_CMD,  0xE,  4, NULL },
+    { OP_WRITE_EQUAL, REG_SPRITE_CMD,  0x1B, 4, NULL },
+    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, NULL }, // id
+    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, NULL }, // toggle
+    { OP_EMUL_END,    0,               0,    0, NULL },
+};
+
+state_t STATE_SPRITE_POS[] = {
+
+    { OP_WRITE_EQUAL, REG_SPRITE_CMD,  0x23, 4, NULL },
+    { OP_WRITE_EQUAL, REG_SPRITE_CMD,  0x1B, 4, NULL },
+    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, NULL }, // id
+    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, NULL }, // x
+    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, NULL }, // y
+    { OP_EMUL_END,    0,               0,    0, NULL },
 };
 
 state_t *STATE_ALL_STARTERS[] = {
@@ -48,9 +79,20 @@ state_t *STATE_ALL_STARTERS[] = {
     &STATE_TIMER[0],
     &STATE_GFX_INIT[0],
     &STATE_IDE[0],
+    &STATE_SPRITE_INIT[0],
+    &STATE_SPRITE_VIS[0],
+    &STATE_SPRITE_POS[0],
 };
 
 bool flag_stop_loop = false;
+
+extern sem_t sem_gfx;
+extern uint32_t width_gfx;
+extern uint32_t height_gfx;
+extern gfx_context_t *ctxt;
+extern sprite_t sprites[MAX_SPRITES];
+
+extern char *disk_path;
 
 static hyper_timer_sleep_params_t param_timer;
 static hyper_init_gfx_params_t param_gfx_init;
@@ -108,6 +150,8 @@ void op_callback_gfx_init_conclude(void *addr) {
     width_gfx = p_gfx_init->width;
     height_gfx = p_gfx_init->height;
     sem_post(&sem_gfx);
+
+    while (ctxt == NULL); // wait to be sure that the gfx is init
 }
 
 void op_callback_ide_prepare(void *addr) {
@@ -136,7 +180,7 @@ void op_callback_ide_store_sector_3(void *addr) {
 void op_callback_ide_store_sector_4(void *addr) {
 
     param_ide.sector_idx |= ((*(uint8_t *)addr) & 0x0F) << 24;
-    // WARNING: what to do with the mode ?
+    // what to do with the mode ? -> nothing
 }
 
 void op_callback_ide_store_data(void *addr) {
@@ -181,27 +225,40 @@ void op_callback_ide_conclude(void *addr) {
     fclose(disk);
 }
 
+void op_callback_sprite_init_prepare(void *addr) { }
+
+void op_callback_sprite_init_store_id(void *addr) { }
+
+void op_callback_sprite_init_store_width(void *addr) { }
+
+void op_callback_sprite_init_store_height(void *addr) { }
+
+void op_callback_sprite_init_store_pixels(void *addr) { }
+
 void op_callback_sprite_init_conclude(void *addr) {
 
-    hyper_sprite_init_params_t *p_sprite_init = (addr == NULL) ? &param_sprite_init : (hyper_sprite_init_params_t *)addr;
+    hyper_sprite_init_params_t *p_sp_init = (addr == NULL) ? &param_sprite_init : (hyper_sprite_init_params_t *)addr;
+    printf("OPERATION : initializing sprite %d with size %dx%d...\n", p_sp_init->id, p_sp_init->width, p_sp_init->height);
 
-    printf("OPERATION : initializing sprite %d of size %dx%d...\n", p_sprite_init->id, p_sprite_init->width, p_sprite_init->height);
-    // TODO:
+    sprites[p_sp_init->id].width = p_sp_init->width;
+    sprites[p_sp_init->id].height = p_sp_init->height;
+    sprites[p_sp_init->id].data = (uint8_t *)p_sp_init->data;
 }
 
 void op_callback_sprite_visibility_conclude(void *addr) {
 
-    hyper_sprite_visibility_params_t *p_sprite_vis = (addr == NULL) ? &param_sprite_vis : (hyper_sprite_visibility_params_t *)addr;
+    hyper_sprite_visibility_params_t *p_sp_vis = (addr == NULL) ? &param_sprite_vis : (hyper_sprite_visibility_params_t *)addr;
+    printf("OPERATION : setting the visibility of the sprite %d at %d...\n", p_sp_vis->id, p_sp_vis->toggle);
 
-    printf("OPERATION : setting the visibility of the sprite %d at %d...\n", p_sprite_vis->id, p_sprite_vis->toggle);
-    // TODO:
+    sprites[p_sp_vis->id].toggle = p_sp_vis->toggle;
 }
 
 void op_callback_sprite_position_conclude(void *addr) {
 
-    hyper_sprite_position_params_t *p_sprite_pos = (addr == NULL) ? &param_sprite_pos : (hyper_sprite_position_params_t *)addr;
+    hyper_sprite_position_params_t *p_sp_pos = (addr == NULL) ? &param_sprite_pos : (hyper_sprite_position_params_t *)addr;
+    printf("OPERATION : setting the position of the sprite %d at (%d, %d)...\n", p_sp_pos->id, p_sp_pos->x, p_sp_pos->y);
 
-    printf("OPERATION : setting the poistion of the sprite %d at (%d, %d)...\n", p_sprite_pos->id, p_sprite_pos->x, p_sprite_pos->y);
-    // TODO:
+    sprites[p_sp_pos->id].x = p_sp_pos->x;
+    sprites[p_sp_pos->id].y = p_sp_pos->y;
 }
 

@@ -1,3 +1,4 @@
+#include <SDL2/SDL_render.h>
 #include <err.h>
 #include <stdbool.h>
 #include <fcntl.h>
@@ -29,6 +30,8 @@
 sem_t sem_gfx;
 uint32_t width_gfx;
 uint32_t height_gfx;
+gfx_context_t *ctxt;
+sprite_t sprites[MAX_SPRITES];
 
 char *disk_path;
 
@@ -187,8 +190,28 @@ int main(int argc, char* argv[])
 
     // -- 8. Manage gfx --
 
-    gfx_context_t *ctxt = gfx_create("Basic Example", width_gfx, height_gfx);
+    memset(sprites, 0, sizeof(sprites));
+
+    ctxt = gfx_create("Basic Example", width_gfx, height_gfx);
     if (!ctxt) err(1, "KVM_SET_REGS");
+
+    while (1) {
+
+        // gfx_background_update(ctxt);
+
+        for (uint8_t i = 0; i < MAX_SPRITES; i++) {
+
+            if (sprites[i].toggle == 1) {
+
+                if (sprites[i].tex == NULL)
+                    sprites[i].tex = gfx_sprite_create(ctxt, sprites[i].data, sprites[i].width, sprites[i].height);
+
+                gfx_sprite_render(ctxt, sprites[i].tex, sprites[i].x, sprites[i].y, sprites[i].width, sprites[i].height);
+            }
+        }
+
+        gfx_present(ctxt);
+    }
 
     // -- X. Finalize --
     pthread_join(t_hypercall, NULL);

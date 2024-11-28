@@ -4,9 +4,6 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include <pthread.h>
-#include <semaphore.h>
-
 
 // --- DEFINE ---
 
@@ -31,20 +28,8 @@ typedef struct {
 } state_t;
 
 extern bool flag_stop_loop;
-
-extern sem_t sem_gfx;
-extern uint32_t width_gfx;
-extern uint32_t height_gfx;
-
 extern char *disk_path;
-
 extern state_t *STATE_ALL_STARTERS[];
-
-extern state_t STATE_TIMER[];
-
-extern state_t STATE_GFX_INIT[];
-
-extern state_t STATE_VGA[];
 
 // --- FUNCITON ---
 
@@ -138,6 +123,16 @@ void op_callback_ide_store_data(void *addr);
  * @param addr Address of the concluding parameters for the IDE operation, or `NULL` to use previously set parameters.
  */
 void op_callback_ide_conclude(void *addr);
+
+void op_callback_sprite_init_prepare(void *addr);
+
+void op_callback_sprite_init_store_id(void *addr);
+
+void op_callback_sprite_init_store_width(void *addr);
+
+void op_callback_sprite_init_store_height(void *addr);
+
+void op_callback_sprite_init_store_pixels(void *addr);
 
 void op_callback_sprite_init_conclude(void *addr);
 
