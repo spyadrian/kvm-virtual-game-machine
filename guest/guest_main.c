@@ -1,14 +1,17 @@
 #include <stdint.h>
 
 #include "idt.h"
-#include "shared/ide_regs.h"
 #include "x86.h"
+#include "guest/stdio.h"
+#include "shared/ide_regs.h"
 
 #include "gfx/gfx.h"
 #include "ide/ide.h"
 #include "timer/timer.h"
 #include "sprite/sprite.h"
 #include "console/console.h"
+
+#include "guest/resources/resources.h"
 
 // If PV == 1 => uses paravirtualized drivers (when available)
 // If PV == 0 => uses physical (hardware) drivers (when available)
@@ -46,13 +49,13 @@ void guest_main() {
     gfx_init(1920, 1080);
 
     // - disk -
-    char data[SECTOR_SIZE] = "here are my data !\n";
-    ide_write(0, data);
+    char ide_data[SECTOR_SIZE] = "here are my data !\n";
+    ide_write(0, ide_data);
 
     // - sprite -
-    sprite_init(0, 0x123, 200, 100);
-    sprite_visibility(0, 1);
+    sprite_init(0, sprite_tuxjedi, SPRITE_TUXJEDI_WIDTH, SPRITE_TUXJEDI_HEIGHT);
     sprite_position(0, 50, 50);
+    sprite_visibility(0, 1);
 
     halt();
 }

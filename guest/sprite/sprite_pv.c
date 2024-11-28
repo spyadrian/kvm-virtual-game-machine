@@ -3,6 +3,7 @@
 #include "guest/utils.h"
 #include "guest/pmio.h"
 #include "shared/hypercall_params.h"
+#include <stdint.h>
 
 // --- DEFINE ---
 
@@ -10,11 +11,11 @@
 
 // --- FUNCTION ---
 
-void sprite_pv_init(uint8_t id, uint64_t data, uint32_t width, uint32_t height) {
+void sprite_pv_init(uint8_t id, uint8_t *data, uint32_t width, uint32_t height) {
 
     hyper_sprite_init_params_t param_sprite_init;
     param_sprite_init.id = id;
-    param_sprite_init.data = data;
+    param_sprite_init.data = (uint64_t)((uint32_t)data);
     param_sprite_init.width = width;
     param_sprite_init.height = height;
     memcpy((void *)HYPERCALL_SHARED_ADDR, (void *)&param_sprite_init, sizeof(param_sprite_init));
