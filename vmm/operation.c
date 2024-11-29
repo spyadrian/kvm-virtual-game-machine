@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <unistd.h>
 #include <semaphore.h>
 
@@ -13,6 +14,10 @@
 #include "shared/hypercall_params.h"
 
 // --- DEFINE ---
+
+#define UNUSED(x) (void)(x)
+
+#define BUF_SIZE (1920 * 1080 * 4)
 
 state_t STATE_TIMER[] = {
 
@@ -59,8 +64,8 @@ state_t STATE_SPRITE_VIS[] = {
 
     { OP_WRITE_EQUAL, REG_SPRITE_CMD,  0xE,  4, NULL },
     { OP_WRITE_EQUAL, REG_SPRITE_CMD,  0x1B, 4, NULL },
-    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, NULL }, // id
-    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, NULL }, // toggle
+    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, op_callback_sprite_visibility_store_id },
+    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, op_callback_sprite_visibility_store_toggle },
     { OP_EMUL_END,    0,               0,    0, NULL },
 };
 
@@ -68,9 +73,9 @@ state_t STATE_SPRITE_POS[] = {
 
     { OP_WRITE_EQUAL, REG_SPRITE_CMD,  0x23, 4, NULL },
     { OP_WRITE_EQUAL, REG_SPRITE_CMD,  0x1B, 4, NULL },
-    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, NULL }, // id
-    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, NULL }, // x
-    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, NULL }, // y
+    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, op_callback_sprite_position_store_id },
+    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, op_callback_sprite_position_store_x },
+    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, op_callback_sprite_position_store_y },
     { OP_EMUL_END,    0,               0,    0, NULL },
 };
 
@@ -102,8 +107,10 @@ static hyper_sprite_visibility_params_t param_sprite_vis;
 static hyper_sprite_position_params_t param_sprite_pos;
 
 // store the index of the actual loop
-static uint32_t loop_ide_data = MAX_LOOP_IDE_DATA;
-static uint16_t buf_ide_data[MAX_LOOP_IDE_DATA];
+static uint64_t loop_idx = BUF_SIZE;
+static uint8_t loop_buf_8[BUF_SIZE];
+static uint16_t *loop_buf_16 = (uint16_t *)loop_buf_8;
+static uint32_t *loop_buf_32 = (uint32_t *)loop_buf_8;
 
 // --- STATIC FUNCTION ---
 
@@ -155,11 +162,13 @@ void op_callback_gfx_init_conclude(void *addr) {
 }
 
 void op_callback_ide_prepare(void *addr) {
+    UNUSED(addr);
 
     flag_stop_loop = false;
-    loop_ide_data = MAX_LOOP_IDE_DATA;
+    loop_idx = 0;
 
-    param_ide.data = (uint64_t)buf_ide_data;
+    memset(loop_buf_8, 0, sizeof(loop_buf_8));
+    param_ide.data = (uint64_t)loop_buf_8;
 }
 
 void op_callback_ide_store_sector_1(void *addr) {
@@ -185,13 +194,13 @@ void op_callback_ide_store_sector_4(void *addr) {
 
 void op_callback_ide_store_data(void *addr) {
 
-    buf_ide_data[MAX_LOOP_IDE_DATA - loop_ide_data] = *(uint16_t *)addr;
-    loop_ide_data--;
+    loop_buf_16[loop_idx] = *(uint16_t *)addr;
+    loop_idx++;
 
-    if (loop_ide_data == 0) {
+    if (loop_idx == MAX_LOOP_IDE_DATA) {
 
+        loop_idx = 0;
         flag_stop_loop = true;
-        loop_ide_data = MAX_LOOP_IDE_DATA;
     }
 }
 
@@ -225,15 +234,42 @@ void op_callback_ide_conclude(void *addr) {
     fclose(disk);
 }
 
-void op_callback_sprite_init_prepare(void *addr) { }
+void op_callback_sprite_init_prepare(void *addr) {
+    UNUSED(addr);
 
-void op_callback_sprite_init_store_id(void *addr) { }
+    flag_stop_loop = false;
+    loop_idx = 0;
 
-void op_callback_sprite_init_store_width(void *addr) { }
+    memset(loop_buf_8, 0, sizeof(loop_buf_8));
+    param_sprite_init.data = (uint64_t)loop_buf_8;
+}
 
-void op_callback_sprite_init_store_height(void *addr) { }
+void op_callback_sprite_init_store_id(void *addr) {
 
-void op_callback_sprite_init_store_pixels(void *addr) { }
+    param_sprite_init.id = *(uint32_t *)addr;
+}
+
+void op_callback_sprite_init_store_width(void *addr) {
+
+    param_sprite_init.width = *(uint32_t *)addr;
+}
+
+void op_callback_sprite_init_store_height(void *addr) {
+
+    param_sprite_init.height = *(uint32_t *)addr;
+}
+
+void op_callback_sprite_init_store_pixels(void *addr) {
+
+    loop_buf_8[loop_idx] = *(uint8_t *)addr;
+    loop_idx++;
+
+    if (loop_idx == param_sprite_init.width * param_sprite_init.height * 4) {
+
+        loop_idx = 0;
+        flag_stop_loop = true;
+    }
+}
 
 void op_callback_sprite_init_conclude(void *addr) {
 
@@ -245,12 +281,37 @@ void op_callback_sprite_init_conclude(void *addr) {
     sprites[p_sp_init->id].data = (uint8_t *)p_sp_init->data;
 }
 
+void op_callback_sprite_visibility_store_id(void *addr) {
+
+    param_sprite_vis.id = *(uint32_t *)addr;
+}
+
+void op_callback_sprite_visibility_store_toggle(void *addr) {
+
+    param_sprite_vis.toggle = *(uint8_t *)addr;
+}
+
 void op_callback_sprite_visibility_conclude(void *addr) {
 
     hyper_sprite_visibility_params_t *p_sp_vis = (addr == NULL) ? &param_sprite_vis : (hyper_sprite_visibility_params_t *)addr;
     printf("OPERATION : setting the visibility of the sprite %d at %d...\n", p_sp_vis->id, p_sp_vis->toggle);
 
     sprites[p_sp_vis->id].toggle = p_sp_vis->toggle;
+}
+
+void op_callback_sprite_position_store_id(void *addr) {
+
+    param_sprite_pos.id = *(uint32_t *)addr;
+}
+
+void op_callback_sprite_position_store_x(void *addr) {
+
+    param_sprite_pos.x = *(uint32_t *)addr;
+}
+
+void op_callback_sprite_position_store_y(void *addr) {
+
+    param_sprite_pos.y = *(uint32_t *)addr;
 }
 
 void op_callback_sprite_position_conclude(void *addr) {

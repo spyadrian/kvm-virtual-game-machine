@@ -136,7 +136,17 @@ void op_callback_sprite_init_store_pixels(void *addr);
 
 void op_callback_sprite_init_conclude(void *addr);
 
+void op_callback_sprite_visibility_store_id(void *addr);
+
+void op_callback_sprite_visibility_store_toggle(void *addr);
+
 void op_callback_sprite_visibility_conclude(void *addr);
+
+void op_callback_sprite_position_store_id(void *addr);
+
+void op_callback_sprite_position_store_x(void *addr);
+
+void op_callback_sprite_position_store_y(void *addr);
 
 void op_callback_sprite_position_conclude(void *addr);
 
