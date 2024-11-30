@@ -34,120 +34,237 @@ extern state_t *STATE_ALL_STARTERS[];
 // --- FUNCITON ---
 
 /**
- * @brief Callback function triggered when the console operation concludes.
+ * @brief Callback for concluding a console operation.
  *
- * @param addr Address containing the console message to be printed.
+ * Processes the final steps of a console operation, such as outputting messages.
+ *
+ * @param addr Pointer to the operation's data.
  */
 void op_callback_console_conclude(void *addr);
 
 /**
- * @brief Callback function to store the timer value during the state machine execution.
+ * @brief Callback for storing timer data.
  *
- * @param addr Address of the timer value to be stored.
+ * Saves the timer configuration value provided by the operation.
+ *
+ * @param addr Pointer to the data containing the timer configuration.
  */
 void op_callback_timer_store(void *addr);
 
 /**
- * @brief Callback function to conclude the timer operation and set the sleep timer.
+ * @brief Callback for concluding a timer operation.
  *
- * @param addr Address of the timer parameters, or `NULL` to use previously stored values.
+ * Finalizes the timer setup by triggering the timer with the specified delay.
+ *
+ * @param addr Pointer to the operation's data.
  */
 void op_callback_timer_conclude(void *addr);
 
 /**
- * @brief Callback function to store the width during graphics initialization.
+ * @brief Callback for storing the width during graphics initialization.
  *
- * @param addr Address of the width value to be stored.
+ * Saves the width value provided by the operation for graphics setup.
+ *
+ * @param addr Pointer to the width data.
  */
 void op_callback_gfx_init_store_w(void *addr);
 
 /**
- * @brief Callback function to store the height during graphics initialization.
+ * @brief Callback for storing the height during graphics initialization.
  *
- * @param addr Address of the height value to be stored.
+ * Saves the height value provided by the operation for graphics setup.
+ *
+ * @param addr Pointer to the height data.
  */
 void op_callback_gfx_init_store_h(void *addr);
 
 /**
- * @brief Callback function to conclude the graphics initialization process.
+ * @brief Callback for concluding graphics initialization.
  *
- * @param addr Address of the graphics parameters, or `NULL` to use previously stored values.
+ * Finalizes graphics setup with the stored width and height values.
+ *
+ * @param addr Pointer to the operation's data.
  */
 void op_callback_gfx_init_conclude(void *addr);
 
 /**
- * @brief Prepares for an IDE operation by setting up necessary parameters.
+ * @brief Callback for preparing an IDE operation.
  *
- * @param addr Address of the IDE parameters or `NULL` if using previously configured parameters.
+ * Initializes the IDE state and prepares the loop buffer.
+ *
+ * @param addr Pointer to the operation's data.
  */
 void op_callback_ide_prepare(void *addr);
 
 /**
- * @brief Stores data in the first sector for an IDE operation.
+ * @brief Callback for storing the first sector value during IDE operation.
  *
- * @param addr Address containing the data to be stored in sector 1, or `NULL` to use pre-existing data.
+ * Saves part of the sector index for an IDE write operation.
+ *
+ * @param addr Pointer to the sector data.
  */
 void op_callback_ide_store_sector_1(void *addr);
 
 /**
- * @brief Stores data in the second sector for an IDE operation.
+ * @brief Callback for storing the second sector value during IDE operation.
  *
- * @param addr Address containing the data to be stored in sector 2, or `NULL` to use pre-existing data.
+ * Saves additional bits of the sector index for an IDE write operation.
+ *
+ * @param addr Pointer to the sector data.
  */
 void op_callback_ide_store_sector_2(void *addr);
 
 /**
- * @brief Stores data in the third sector for an IDE operation.
+ * @brief Callback for storing the third sector value during IDE operation.
  *
- * @param addr Address containing the data to be stored in sector 3, or `NULL` to use pre-existing data.
+ * Saves further bits of the sector index for an IDE write operation.
+ *
+ * @param addr Pointer to the sector data.
  */
 void op_callback_ide_store_sector_3(void *addr);
 
 /**
- * @brief Stores data in the fourth sector for an IDE operation.
+ * @brief Callback for storing the fourth sector value during IDE operation.
  *
- * @param addr Address containing the data to be stored in sector 4, or `NULL` to use pre-existing data.
+ * Completes the sector index for an IDE write operation.
+ *
+ * @param addr Pointer to the sector data.
  */
 void op_callback_ide_store_sector_4(void *addr);
 
 /**
- * @brief Stores the entire data payload for an IDE operation.
+ * @brief Callback for storing data in a loop during IDE operation.
  *
- * @param addr Address containing the complete IDE data payload, or `NULL` if previously stored data is to be used.
+ * Writes data into the loop buffer during an IDE write operation.
+ *
+ * @param addr Pointer to the data being stored.
  */
 void op_callback_ide_store_data(void *addr);
 
 /**
- * @brief Concludes the IDE operation by finalizing data transfer or processing steps.
+ * @brief Callback for concluding an IDE operation.
  *
- * @param addr Address of the concluding parameters for the IDE operation, or `NULL` to use previously set parameters.
+ * Finalizes an IDE operation by writing data to the specified sector.
+ *
+ * @param addr Pointer to the operation's data.
  */
 void op_callback_ide_conclude(void *addr);
 
+/**
+ * @brief Callback for preparing sprite initialization.
+ *
+ * Prepares the sprite data buffer and resets the loop state.
+ *
+ * @param addr Pointer to the operation's data.
+ */
 void op_callback_sprite_init_prepare(void *addr);
 
+/**
+ * @brief Callback for storing the sprite ID during initialization.
+ *
+ * Saves the sprite's ID for the initialization process.
+ *
+ * @param addr Pointer to the sprite ID data.
+ */
 void op_callback_sprite_init_store_id(void *addr);
 
+/**
+ * @brief Callback for storing the sprite width during initialization.
+ *
+ * Saves the sprite's width value for the initialization process.
+ *
+ * @param addr Pointer to the width data.
+ */
 void op_callback_sprite_init_store_width(void *addr);
 
+/**
+ * @brief Callback for storing the sprite height during initialization.
+ *
+ * Saves the sprite's height value for the initialization process.
+ *
+ * @param addr Pointer to the height data.
+ */
 void op_callback_sprite_init_store_height(void *addr);
 
+/**
+ * @brief Callback for storing sprite pixel data during initialization.
+ *
+ * Writes pixel data into the loop buffer during the initialization process.
+ *
+ * @param addr Pointer to the pixel data.
+ */
 void op_callback_sprite_init_store_pixels(void *addr);
 
+/**
+ * @brief Callback for concluding sprite initialization.
+ *
+ * Finalizes sprite initialization and applies the stored configuration.
+ *
+ * @param addr Pointer to the operation's data.
+ */
 void op_callback_sprite_init_conclude(void *addr);
 
+/**
+ * @brief Callback for storing the sprite ID during visibility update.
+ *
+ * Saves the sprite's ID for visibility changes.
+ *
+ * @param addr Pointer to the sprite ID data.
+ */
 void op_callback_sprite_visibility_store_id(void *addr);
 
+/**
+ * @brief Callback for storing the visibility toggle during sprite update.
+ *
+ * Saves the toggle value to update the sprite's visibility.
+ *
+ * @param addr Pointer to the toggle data.
+ */
 void op_callback_sprite_visibility_store_toggle(void *addr);
 
+/**
+ * @brief Callback for concluding sprite visibility update.
+ *
+ * Finalizes the visibility update for the sprite.
+ *
+ * @param addr Pointer to the operation's data.
+ */
 void op_callback_sprite_visibility_conclude(void *addr);
 
+/**
+ * @brief Callback for storing the sprite ID during position update.
+ *
+ * Saves the sprite's ID for position changes.
+ *
+ * @param addr Pointer to the sprite ID data.
+ */
 void op_callback_sprite_position_store_id(void *addr);
 
+/**
+ * @brief Callback for storing the X-coordinate during sprite position update.
+ *
+ * Saves the X-coordinate value for the sprite's new position.
+ *
+ * @param addr Pointer to the X-coordinate data.
+ */
 void op_callback_sprite_position_store_x(void *addr);
 
+/**
+ * @brief Callback for storing the Y-coordinate during sprite position update.
+ *
+ * Saves the Y-coordinate value for the sprite's new position.
+ *
+ * @param addr Pointer to the Y-coordinate data.
+ */
 void op_callback_sprite_position_store_y(void *addr);
 
+/**
+ * @brief Callback for concluding sprite position update.
+ *
+ * Finalizes the position update for the sprite.
+ *
+ * @param addr Pointer to the operation's data.
+ */
 void op_callback_sprite_position_conclude(void *addr);
 
 #endif // _OPERATION_H_

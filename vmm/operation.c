@@ -112,11 +112,9 @@ static uint8_t loop_buf_8[BUF_SIZE];
 static uint16_t *loop_buf_16 = (uint16_t *)loop_buf_8;
 static uint32_t *loop_buf_32 = (uint32_t *)loop_buf_8;
 
-// --- STATIC FUNCTION ---
-
-// ...
-
 // --- FUNCTION ---
+
+// === CONSOLE ===
 
 void op_callback_console_conclude(void *addr) {
 
@@ -125,6 +123,9 @@ void op_callback_console_conclude(void *addr) {
     printf("OPERATION : sending a message...\n");
     printf("%s\n", (char *)p_consol->msg);
 }
+
+
+// === TIMER ===
 
 void op_callback_timer_store(void *addr) {
 
@@ -138,6 +139,9 @@ void op_callback_timer_conclude(void *addr) {
     printf("OPERATION : setting up a %dus timer...\n", p_timer->us);
     usleep(p_timer->us);
 }
+
+
+// === GFX INIT ===
 
 void op_callback_gfx_init_store_w(void *addr) {
 
@@ -160,6 +164,9 @@ void op_callback_gfx_init_conclude(void *addr) {
 
     while (ctxt == NULL); // wait to be sure that the gfx is init
 }
+
+
+// === IDE ===
 
 void op_callback_ide_prepare(void *addr) {
     UNUSED(addr);
@@ -234,6 +241,9 @@ void op_callback_ide_conclude(void *addr) {
     fclose(disk);
 }
 
+
+// === SPRITE INIT ===
+
 void op_callback_sprite_init_prepare(void *addr) {
     UNUSED(addr);
 
@@ -281,6 +291,9 @@ void op_callback_sprite_init_conclude(void *addr) {
     sprites[p_sp_init->id].data = (uint8_t *)p_sp_init->data;
 }
 
+
+// === SPRITE VISIBILITY ===
+
 void op_callback_sprite_visibility_store_id(void *addr) {
 
     param_sprite_vis.id = *(uint32_t *)addr;
@@ -298,6 +311,9 @@ void op_callback_sprite_visibility_conclude(void *addr) {
 
     sprites[p_sp_vis->id].toggle = p_sp_vis->toggle;
 }
+
+
+// === SPRITE POSITION ===
 
 void op_callback_sprite_position_store_id(void *addr) {
 
