@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "descriptors.h"
 #include "x86.h"
+#include "irq.h"
 
 #define GDT_KERNEL_CODE_SELECTOR 0x08
 
@@ -53,12 +54,18 @@ static idt_entry_t idt_build_entry(uint16_t selector, uint32_t offset, uint8_t t
 
 // Low level handler defined in idt_asm.s
 void _irq0();
+void _irq1();
 
 // IRQ handler
 void irq_handler(uint32_t irq_number) {
+
+    handler_t *hd = irq_get_handler(irq_number);
+    if (hd != 0) hd->func();
 }
 
 void idt_init() {
+    irq_init();
+
     idt_ptr.limit = sizeof(idt)-1;
     idt_ptr.base  = (uint32_t)&idt;
 
@@ -66,6 +73,7 @@ void idt_init() {
     memset(idt, 0, sizeof(idt));
 
     idt[0] = idt_build_entry(GDT_KERNEL_CODE_SELECTOR, (uint32_t)_irq0, TYPE_INTERRUPT_GATE, DPL_KERNEL);
+    idt[1] = idt_build_entry(GDT_KERNEL_CODE_SELECTOR, (uint32_t)_irq1, TYPE_INTERRUPT_GATE, DPL_KERNEL);
 
     idt_load(&idt_ptr);
 }

@@ -132,6 +132,7 @@ static state_t *state_check(uint64_t addr, uint8_t size, uint32_t value) {
             break;
 
             case OP_READ_INJECT:
+            case OP_READ_INJECT_KEY:
 
                 if (state->addr == addr && state->size == size)
                     return state;
@@ -174,6 +175,13 @@ static void state_compute(state_t *state, uint32_t value, uint8_t *addr) {
             injecte_data(addr, state->size, state->value);
             printf("guest read: size=%d port=0x%lx [value injected by VMM=0x%x]\n",
                    state->size * 8, state->addr, state->value);
+        break;
+
+        case OP_READ_INJECT_KEY:
+
+            // WARNING: operation should not be here, but f*** it
+            printf("OPERATION : send last key pressed %c...\n", (char)last_key_pressed);
+            injecte_data(addr, state->size, last_key_pressed);
         break;
 
         case OP_WRITE_STORE_LOOP:

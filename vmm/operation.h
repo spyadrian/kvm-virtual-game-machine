@@ -7,7 +7,7 @@
 
 // --- DEFINE ---
 
-#define STATE_MACHINE_NUM 3
+#define STATE_MACHINE_NUM 7
 
 typedef enum {
 
@@ -15,6 +15,7 @@ typedef enum {
     OP_WRITE_STORE,       // Store the written value into a specific location (used in callbacks)
     OP_WRITE_STORE_LOOP,  // Store the written value into a specific location multiple time
     OP_READ_INJECT,       // Inject a value into the guest from a specific address
+    OP_READ_INJECT_KEY,   // Inject last key pressed into the guest from a specific address
     OP_EMUL_END,          // End of the state machine, with an callback for completion
 } operation_t;
 
@@ -266,5 +267,7 @@ void op_callback_sprite_position_store_y(void *addr);
  * @param addr Pointer to the operation's data.
  */
 void op_callback_sprite_position_conclude(void *addr);
+
+void op_keyboard_pv_send_code(void *shared_buf, uint32_t key);
 
 #endif // _OPERATION_H_

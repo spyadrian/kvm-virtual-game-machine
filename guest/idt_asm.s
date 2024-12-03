@@ -15,6 +15,11 @@ _irq0:
     push    0  ; put irq number on the stack
     jmp     irq_handler_wrapper
 
+global _irq1
+_irq1:
+    push    1  ; put irq number on the stack
+    jmp     irq_handler_wrapper
+
 extern irq_handler
 
 irq_handler_wrapper:

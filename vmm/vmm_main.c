@@ -1,3 +1,4 @@
+#include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_render.h>
 #include <err.h>
 #include <stdbool.h>
@@ -32,6 +33,7 @@ uint32_t width_gfx;
 uint32_t height_gfx;
 gfx_context_t *ctxt;
 sprite_t sprites[MAX_SPRITES];
+uint32_t last_key_pressed;
 
 char *disk_path;
 
@@ -143,6 +145,25 @@ int main(int argc, char* argv[])
     // Close the file descriptor
     close(binfd);
 
+    // -- 5.5. Create virtual PIC (Programmable Interrupt Controller) --
+    if (ioctl(vmfd, KVM_CREATE_IRQCHIP, NULL) < 0)
+        err(1, "Error: creating the vPIC\n");
+
+    struct kvm_irqchip irqchip = {
+        .chip_id = 0,       // 0 = PIC1, 1 = PIC2, 2 = IOAPIC
+    };
+
+    // retrieve the PIC registers
+    if (ioctl(vmfd, KVM_GET_IRQCHIP, &irqchip) < 0)
+        err(1, "Error: retrieving the PIC registers\n");
+
+    // configure the PIC to have auto-acknoledge from the guest
+    irqchip.chip.pic.auto_eoi = 1;
+
+    // set the PIC registers
+    if (ioctl(vmfd, KVM_SET_IRQCHIP, &irqchip) < 0)
+        err(1, "Error: setting the PIC registers\n");
+
     // -- 6.1. Create a vCPU --
     vcpufd = ioctl(vmfd, KVM_CREATE_VCPU, (unsigned long)0);
     if (vcpufd == -1) err(1, "KVM_CREATE_VCPU");
@@ -195,10 +216,44 @@ int main(int argc, char* argv[])
     ctxt = gfx_create("Basic Example", width_gfx, height_gfx);
     if (!ctxt) err(1, "KVM_SET_REGS");
 
-    while (1) {
+    bool done = false;
+    while (!done) {
 
-        // gfx_background_update(ctxt);
+        gfx_background_update(ctxt);
 
+        // - handle key -
+        SDL_Keycode key = gfx_keypressed();
+        if (key != 0) {
+
+            if (key == SDLK_ESCAPE) {
+
+                done = true;
+            }
+            else {
+
+                // - write key code to guest -
+                last_key_pressed = (uint32_t)key;
+
+                // WARNING: no need to do it in emulation, but whatever...
+                op_keyboard_pv_send_code(shared_buf, last_key_pressed);
+
+                // - trigger interrupt -
+                struct kvm_irq_level irq_level;
+                irq_level.irq = 1; // 1 -> key interrupt
+
+                // drive signal -> up (1)
+                irq_level.level = 1;
+                if (ioctl(vmfd, KVM_IRQ_LINE, &irq_level) < 0)
+                    err(1, "Error: driving irq signal up\n");
+
+                // drive signal -> down (0)
+                irq_level.level = 0;
+                if (ioctl(vmfd, KVM_IRQ_LINE, &irq_level) < 0)
+                    err(1, "Error: driving irq signal down\n");
+            }
+        }
+
+        // - handle sprites -
         for (uint8_t i = 0; i < MAX_SPRITES; i++) {
 
             if (sprites[i].toggle == 1) {

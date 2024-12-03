@@ -10,6 +10,7 @@
 typedef void (*state_handler_t)(struct kvm_run *run, ...);
 
 extern state_handler_t const STATE_HANDLERS[];
+extern uint32_t last_key_pressed;
 
 // --- FUNCITON ---
 

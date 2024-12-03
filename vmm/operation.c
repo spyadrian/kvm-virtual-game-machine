@@ -28,7 +28,7 @@ state_t STATE_TIMER[] = {
 
 state_t STATE_GFX_INIT[] = {
 
-    { OP_READ_INJECT, REG_GFX_INIT_ST,   0, 1, NULL },
+    { OP_READ_INJECT, REG_GFX_INIT_ST,   0, 4, NULL },
     { OP_WRITE_EQUAL, REG_GFX_INIT_CMD,  5, 4, NULL },
     { OP_WRITE_STORE, REG_GFX_INIT_DATA, 0, 4, op_callback_gfx_init_store_w },
     { OP_WRITE_STORE, REG_GFX_INIT_DATA, 0, 4, op_callback_gfx_init_store_h },
@@ -51,7 +51,8 @@ state_t STATE_IDE[] = {
 
 state_t STATE_SPRITE_INIT[] = {
 
-    { OP_WRITE_EQUAL,      REG_SPRITE_CMD,  0x9,  4, op_callback_sprite_init_prepare },
+    { OP_READ_INJECT,      REG_SPRITE_ST,   64,    4, op_callback_sprite_init_prepare },
+    { OP_WRITE_EQUAL,      REG_SPRITE_CMD,  0x9,  4, NULL },
     { OP_WRITE_EQUAL,      REG_SPRITE_CMD,  0x1B, 4, NULL },
     { OP_WRITE_STORE,      REG_SPRITE_DATA, 0,    4, op_callback_sprite_init_store_id },
     { OP_WRITE_STORE,      REG_SPRITE_DATA, 0,    4, op_callback_sprite_init_store_width },
@@ -65,18 +66,24 @@ state_t STATE_SPRITE_VIS[] = {
     { OP_WRITE_EQUAL, REG_SPRITE_CMD,  0xE,  4, NULL },
     { OP_WRITE_EQUAL, REG_SPRITE_CMD,  0x1B, 4, NULL },
     { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, op_callback_sprite_visibility_store_id },
-    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, op_callback_sprite_visibility_store_toggle },
-    { OP_EMUL_END,    0,               0,    0, NULL },
+    { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    1, op_callback_sprite_visibility_store_toggle },
+    { OP_EMUL_END,    0,               0,    0, op_callback_sprite_visibility_conclude },
 };
 
 state_t STATE_SPRITE_POS[] = {
 
-    { OP_WRITE_EQUAL, REG_SPRITE_CMD,  0x23, 4, NULL },
+    { OP_WRITE_EQUAL, REG_SPRITE_CMD,  35,   4, NULL },
     { OP_WRITE_EQUAL, REG_SPRITE_CMD,  0x1B, 4, NULL },
     { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, op_callback_sprite_position_store_id },
     { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, op_callback_sprite_position_store_x },
     { OP_WRITE_STORE, REG_SPRITE_DATA, 0,    4, op_callback_sprite_position_store_y },
-    { OP_EMUL_END,    0,               0,    0, NULL },
+    { OP_EMUL_END,    0,               0,    0, op_callback_sprite_position_conclude },
+};
+
+state_t STATE_KEYBOARD[] = {
+
+    { OP_READ_INJECT_KEY, REG_KEYBOARD_DATA, 0, 4, NULL },
+    { OP_EMUL_END,        0,                 0, 0, NULL },
 };
 
 state_t *STATE_ALL_STARTERS[] = {
@@ -87,6 +94,7 @@ state_t *STATE_ALL_STARTERS[] = {
     &STATE_SPRITE_INIT[0],
     &STATE_SPRITE_VIS[0],
     &STATE_SPRITE_POS[0],
+    &STATE_KEYBOARD[0],
 };
 
 bool flag_stop_loop = false;
@@ -110,7 +118,7 @@ static hyper_sprite_position_params_t param_sprite_pos;
 static uint64_t loop_idx = BUF_SIZE;
 static uint8_t loop_buf_8[BUF_SIZE];
 static uint16_t *loop_buf_16 = (uint16_t *)loop_buf_8;
-static uint32_t *loop_buf_32 = (uint32_t *)loop_buf_8;
+// static uint32_t *loop_buf_32 = (uint32_t *)loop_buf_8;
 
 // --- FUNCTION ---
 
@@ -339,3 +347,12 @@ void op_callback_sprite_position_conclude(void *addr) {
     sprites[p_sp_pos->id].y = p_sp_pos->y;
 }
 
+// === KEYBOARD ===
+
+void op_keyboard_pv_send_code(void *shared_buf, uint32_t key) {
+
+    hyper_keyboard_params_t param_key;
+    param_key.key = key;
+
+    memcpy(shared_buf, (void *)&param_key, sizeof(param_key));
+}

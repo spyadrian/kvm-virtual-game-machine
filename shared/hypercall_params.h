@@ -17,6 +17,7 @@
 #define HYPERCALL_CODE_SPRITE_INIT  5
 #define HYPERCALL_CODE_SPRITE_VISI  6
 #define HYPERCALL_CODE_SPRITE_POS   7
+#define HYPERCALL_CODE_KEYBOARD     8
 
 #define REG_TIMER_CMD  0x43
 #define REG_TIMER_DATA 0x40
@@ -28,6 +29,8 @@
 #define REG_SPRITE_ST   0x3E800000
 #define REG_SPRITE_CMD  0x3E800010
 #define REG_SPRITE_DATA 0x3E800020
+
+#define REG_KEYBOARD_DATA 0x60
 
 // --- SHARED STRUCT ---
 
@@ -73,6 +76,11 @@ typedef struct {
     uint32_t x;         // x position
     uint32_t y;         // y position
 } __attribute__((packed)) hyper_sprite_position_params_t;
+
+typedef struct {
+
+    uint32_t key;         // code of the pressed key
+} __attribute__((packed)) hyper_keyboard_params_t;
 
 // --- FUNCTION ---
 

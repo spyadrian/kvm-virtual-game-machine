@@ -11,6 +11,8 @@
 
 void sprite_phys_init(uint8_t id, uint8_t *data, uint32_t width, uint32_t height) {
 
+    while(*(uint32_t *)REG_SPRITE_ST != 64);
+
     *(uint32_t *)REG_SPRITE_CMD = 9;
 
     *(uint32_t *)REG_SPRITE_CMD = 27;
