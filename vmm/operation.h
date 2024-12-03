@@ -268,6 +268,15 @@ void op_callback_sprite_position_store_y(void *addr);
  */
 void op_callback_sprite_position_conclude(void *addr);
 
+/**
+ * @brief Sends a keyboard input code using paravirtualized (pv) mechanisms.
+ *
+ * Prepares the keyboard input data structure with the specified key code and copies 
+ * it to the provided shared buffer. This is used for paravirtualized keyboard input handling.
+ *
+ * @param shared_buf Pointer to the shared buffer where the keyboard input data will be copied.
+ * @param key The key code representing the keyboard input.
+ */
 void op_keyboard_pv_send_code(void *shared_buf, uint32_t key);
 
 #endif // _OPERATION_H_
