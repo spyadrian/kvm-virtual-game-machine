@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     int32_t mmap_size;
 
     // -- 0. Handle Args --
-    if (argc != 3) err(1, "Number of args invalide");
+    if (argc != 3) errx(1, "Number of args invalide");
     char *file_path = argv[1];
     disk_path = argv[2];
 
@@ -233,9 +233,6 @@ int main(int argc, char* argv[])
 
                 // - write key code to guest -
                 last_key_pressed = (uint32_t)key;
-
-                // WARNING: no need to do it in emulation, but whatever...
-                op_keyboard_pv_send_code(shared_buf, last_key_pressed);
 
                 // - trigger interrupt -
                 struct kvm_irq_level irq_level;

@@ -396,6 +396,11 @@ void handle_hypercall(uint32_t code, uint8_t *shared_buf, uint8_t *mem) {
             wrapper_op_sprite_position(shared_buf);
         break;
 
+        case HYPERCALL_CODE_KEYBOARD:
+            // WARNING: It doesn't have any wrapper as the phys call is quite special (no conclud func)
+            op_keyboard_pv_send_code(shared_buf, last_key_pressed);
+        break;
+
         default:
             errx(1, "Unsupported hypercall code.\n");
         break;

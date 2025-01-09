@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <semaphore.h>
 
+#include "vmm/handler.h"
 #include "shared/ide_regs.h"
 #include "shared/hypercall_params.h"
 
@@ -351,8 +352,8 @@ void op_callback_sprite_position_conclude(void *addr) {
 
 void op_keyboard_pv_send_code(void *shared_buf, uint32_t key) {
 
-    hyper_keyboard_params_t param_key;
-    param_key.key = key;
+    printf("OPERATION : updating %d (%c) as the keycode of the shared buffer...\n", key, (char)key);
 
-    memcpy(shared_buf, (void *)&param_key, sizeof(param_key));
+    hyper_keyboard_params_t *p_keyboard = (hyper_keyboard_params_t *)shared_buf;
+    p_keyboard->key = key;
 }
