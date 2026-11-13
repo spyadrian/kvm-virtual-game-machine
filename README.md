@@ -2,6 +2,8 @@
 
 A minimal **hypervisor (VMM) written from scratch on the Linux KVM API**, together with a small bare-metal **x86 guest OS** – every device exists both as an **emulated** device and as a **paravirtualized** one.
 
+<p align="center"><img src="docs/demo.gif" width="480" alt="Sprites rendered by the VMM, moved by the guest through hypercalls"></p>
+
 > hepia (HES-SO Geneva) · Advanced Virtualization · 2024-2025
 
 ## Overview
@@ -50,7 +52,8 @@ The VMM can also be run directly: `vmm/vmm GUEST_BINARY DISK_IMAGE`.
 ```
 ├── vmm/        hypervisor: KVM setup, VM-exit handlers, device state machines, SDL2 display
 ├── guest/      guest OS: boot, IDT/IRQ, one folder per device (*_phys.c / *_pv.c)
-└── shared/     definitions shared by the VMM and the guest (hypercall parameters, IDE registers)
+├── shared/     definitions shared by the VMM and the guest (hypercall parameters, IDE registers)
+└── docs/       demo
 ```
 
 ## Tech
